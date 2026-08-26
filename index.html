@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>CoatCount</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="mode-in">
+  <div id="swipe-overlay" class="swipe-effect"></div>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-logo"></div>
+      <div>
+        <h1 class="brand-title">CoatCount</h1>
+        <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
+      </div>
+    </div>
+    <div id="mode-indicator" class="mode-pill">STOCK IN</div>
+  </header>
+
+  <main id="app-content">
+    <section id="scanner-view" class="view-panel active">
+      <div class="qty-selector-container">
+        <span class="qty-label">Batch:</span>
+        <div class="qty-pills" id="qty-pill-group">
+          <button class="qty-pill active" data-qty="1">1x</button>
+          <button class="qty-pill" data-qty="2">2x</button>
+          <button class="qty-pill" data-qty="5">5x</button>
+          <button class="qty-pill" data-qty="10">10x</button>
+          <button class="qty-pill" data-qty="20">20x</button>
+        </div>
+      </div>
+
+      <div class="camera-card">
+        <div id="reader-container">
+          <div id="interactive-reader"></div>
+          <div class="scan-laser"></div>
+        </div>
+      </div>
+
+      <div id="last-scanned-card" class="dense-card empty">
+        <div class="empty-placeholder">
+          <div class="pulse-icon">📷</div>
+          <p>Scan a Dulux paint tin barcode...</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventory-view" class="view-panel">
+      <div class="search-bar-wrapper">
+        <input type="search" id="inventory-search" placeholder="Search product or code..." />
+      </div>
+      <div class="table-container">
+        <table id="inventory-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">Qty</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-tab active" data-mode="in">
+      <span class="tab-icon">📥</span>
+      <span class="tab-label">Stock In</span>
+    </button>
+    <button class="nav-tab" data-mode="out">
+      <span class="tab-icon">📤</span>
+      <span class="tab-label">Stock Out</span>
+    </button>
+    <button class="nav-tab" data-mode="inventory">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">Inventory</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+    }
+  </script>
+</body>
+</html>
