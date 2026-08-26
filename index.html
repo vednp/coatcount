@@ -143,6 +143,50 @@
       </div>
     </div>
 
+    <!-- Scan Confirmation Bottom Sheet -->
+  <div id="confirm-sheet" class="bottom-sheet">
+    <div class="sheet-content">
+      <div class="sheet-drag-handle"></div>
+      <h2 id="confirm-name" class="sheet-title">Product Name</h2>
+      <p id="confirm-code" class="sheet-subtitle">Code: ---</p>
+
+      <!-- Pack Size Selection -->
+      <div class="selection-group">
+        <label>Pack Size / Volume</label>
+        <div class="pills-scroll" id="pack-size-pills">
+          <button class="pill size-pill active" data-size="1L">1 Ltr</button>
+          <button class="pill size-pill" data-size="4L">4 Ltr</button>
+          <button class="pill size-pill" data-size="10L">10 Ltr</button>
+          <button class="pill size-pill" data-size="20L">20 Ltr</button>
+          <button class="pill size-pill" data-size="1Kg">1 Kg</button>
+          <button class="pill size-pill" data-size="20Kg">20 Kg</button>
+        </div>
+      </div>
+
+      <!-- Quantity Selection -->
+      <div class="selection-group">
+        <label>Quantity to <span id="confirm-mode-text">Add</span></label>
+        <div class="pills-scroll" id="pack-qty-pills">
+          <button class="pill qty-pill active" data-qty="1">1</button>
+          <button class="pill qty-pill" data-qty="2">2</button>
+          <button class="pill qty-pill" data-qty="5">5</button>
+          <button class="pill qty-pill" data-qty="10">10</button>
+          <button class="pill qty-pill" id="custom-qty-btn" data-qty="custom">Custom</button>
+        </div>
+      </div>
+
+      <!-- Swipe to Confirm Button -->
+      <div class="swipe-btn-container" id="swipe-track">
+        <div class="swipe-btn-text" id="swipe-text">Swipe right to confirm >></div>
+        <div class="swipe-btn-thumb" id="swipe-thumb">
+          <span id="swipe-icon">📦</span>
+        </div>
+      </div>
+      
+      <button class="btn-cancel-sheet" onclick="App.closeConfirmSheet()">Cancel</button>
+    </div>
+  </div>
+
     <script src="app.js"></script>
     <script>
       if ("serviceWorker" in navigator) {

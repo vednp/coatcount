@@ -648,3 +648,230 @@ window.addEventListener("DOMContentLoaded", async () => {
   await App.start();
   initCamera();
 });
+
+// Add these state variables to the top of your App object
+App.pendingItem = null;
+App.selectedSize = "1L";
+App.selectedQty = 1;
+
+// --- 1. The Dot-Matrix OCR Engine Fix ---
+let ocrWorker = null;
+
+async function initOCR() {
+  if (!ocrWorker) {
+    ocrWorker = await Tesseract.createWorker("eng");
+    await ocrWorker.setParameters({ tessedit_char_whitelist: "0123456789" }); // Force numbers only to reduce errors
+  }
+
+  const video = document.getElementById("camera-feed");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", focusMode: "continuous" },
+    });
+    video.srcObject = stream;
+  } catch (err) {
+    console.error("Camera denied", err);
+  }
+
+  document
+    .getElementById("scan-trigger-btn")
+    .addEventListener("click", captureAndRead);
+}
+
+async function captureAndRead() {
+  const video = document.getElementById("camera-feed");
+  const canvas = document.getElementById("capture-canvas");
+  const ctx = canvas.getContext("2d");
+  const btn = document.getElementById("scan-trigger-btn");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  // THE DOT-MATRIX FIX: Blur to connect dots, contrast to harden lines
+  ctx.filter = "grayscale(100%) contrast(300%) blur(1.5px)";
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  btn.textContent = "⏳ Processing...";
+  btn.disabled = true;
+
+  try {
+    const {
+      data: { text },
+    } = await ocrWorker.recognize(canvas);
+    const foundNumbers = text.match(/\b\d{5,8}\b/g) || [];
+    let matchedCode = null;
+
+    for (const num of foundNumbers) {
+      if (PRODUCT_CATALOG[num]) {
+        matchedCode = num;
+        break;
+      }
+    }
+
+    if (matchedCode) {
+      App.openConfirmSheet(matchedCode);
+    } else {
+      App.triggerFeedback("error");
+      alert("Code not recognized. Ensure the numbers are in focus.");
+    }
+  } catch (err) {
+    console.error("OCR Failed", err);
+  } finally {
+    btn.textContent = "📸 Tap to Scan Code";
+    btn.disabled = false;
+  }
+}
+
+// --- 2. Post-Scan Confirmation Logic ---
+App.openConfirmSheet = function (code) {
+  this.pendingItem = { code: code, ...PRODUCT_CATALOG[code] };
+
+  document.getElementById("confirm-name").textContent = this.pendingItem.name;
+  document.getElementById("confirm-code").textContent = `Code: ${code}`;
+  document.getElementById("confirm-mode-text").textContent =
+    this.currentMode === "in" ? "Add" : "Sell";
+
+  // Reset slider and pills
+  document.getElementById("swipe-thumb").style.transform = `translateX(0px)`;
+  document.getElementById("swipe-text").style.opacity = 1;
+  this.selectedSize = "1L";
+  this.selectedQty = 1;
+  this.updatePills();
+
+  document.getElementById("confirm-sheet").classList.add("active");
+  this.triggerFeedback(this.currentMode); // Haptic tick
+};
+
+App.closeConfirmSheet = function () {
+  document.getElementById("confirm-sheet").classList.remove("active");
+  this.pendingItem = null;
+};
+
+App.updatePills = function () {
+  document.querySelectorAll(".size-pill").forEach((p) => {
+    p.classList.toggle("active", p.dataset.size === this.selectedSize);
+  });
+  document.querySelectorAll(".qty-pill").forEach((p) => {
+    p.classList.toggle(
+      "active",
+      p.dataset.qty == this.selectedQty ||
+        (p.dataset.qty === "custom" &&
+          !["1", "2", "5", "10"].includes(String(this.selectedQty))),
+    );
+  });
+};
+
+// Bind pill clicks (run this inside App.bindEvents())
+document.querySelectorAll(".size-pill").forEach((pill) => {
+  pill.addEventListener("click", (e) => {
+    App.selectedSize = e.target.dataset.size;
+    App.updatePills();
+  });
+});
+document.querySelectorAll(".qty-pill").forEach((pill) => {
+  pill.addEventListener("click", (e) => {
+    if (e.target.dataset.qty === "custom") {
+      const val = prompt("Enter custom quantity:");
+      const parsed = parseInt(val, 10);
+      if (parsed > 0) App.selectedQty = parsed;
+    } else {
+      App.selectedQty = parseInt(e.target.dataset.qty, 10);
+    }
+    App.updatePills();
+  });
+});
+
+// --- 3. Swipe-to-Confirm Physics ---
+const track = document.getElementById("swipe-track");
+const thumb = document.getElementById("swipe-thumb");
+const text = document.getElementById("swipe-text");
+let isDragging = false;
+let startX = 0;
+let currentTranslate = 0;
+let maxTranslate = 0;
+
+thumb.addEventListener(
+  "touchstart",
+  (e) => {
+    isDragging = true;
+    startX = e.touches[0].clientX;
+    maxTranslate = track.offsetWidth - thumb.offsetWidth - 8; // 8px padding
+    thumb.style.transition = "none";
+  },
+  { passive: true },
+);
+
+thumb.addEventListener(
+  "touchmove",
+  (e) => {
+    if (!isDragging) return;
+    const currentX = e.touches[0].clientX;
+    currentTranslate = currentX - startX;
+
+    if (currentTranslate < 0) currentTranslate = 0;
+    if (currentTranslate > maxTranslate) currentTranslate = maxTranslate;
+
+    thumb.style.transform = `translateX(${currentTranslate}px)`;
+    text.style.opacity = 1 - currentTranslate / maxTranslate;
+  },
+  { passive: true },
+);
+
+thumb.addEventListener("touchend", () => {
+  isDragging = false;
+  thumb.style.transition = "transform 0.3s ease";
+
+  // If dragged more than 85% of the way, commit!
+  if (currentTranslate > maxTranslate * 0.85) {
+    thumb.style.transform = `translateX(${maxTranslate}px)`;
+    setTimeout(() => App.commitScan(), 200);
+  } else {
+    // Snap back
+    thumb.style.transform = `translateX(0px)`;
+    text.style.opacity = 1;
+  }
+});
+
+// --- 4. Database Save with Pack Size ---
+App.commitScan = async function () {
+  if (!this.pendingItem) return;
+
+  // Combine code and pack size to create a unique ID (e.g., "324000_4L")
+  const uniqueId = `${this.pendingItem.code}_${this.selectedSize}`;
+  let item = await this.db.getItem(uniqueId);
+  const delta = this.selectedQty;
+
+  if (this.currentMode === "in") {
+    if (!item) {
+      item = {
+        code: uniqueId,
+        rawCode: this.pendingItem.code,
+        name: this.pendingItem.name,
+        category: this.pendingItem.category,
+        packSize: this.selectedSize,
+        quantity: delta,
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      item.quantity += delta;
+      item.updatedAt = new Date().toISOString();
+    }
+    await this.db.setItem(item);
+    this.triggerFeedback("in");
+  } else if (this.currentMode === "out") {
+    if (!item || item.quantity <= delta) {
+      if (item) await this.db.deleteItem(uniqueId);
+      this.triggerFeedback("out");
+    } else {
+      item.quantity -= delta;
+      item.updatedAt = new Date().toISOString();
+      await this.db.setItem(item);
+      this.triggerFeedback("out");
+    }
+  }
+
+  this.closeConfirmSheet();
+  this.updateStats();
+  if (document.getElementById("inventory-view").classList.contains("active"))
+    this.renderInventory();
+};
