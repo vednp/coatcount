@@ -609,292 +609,881 @@ const App = {
 };
 
 // --- 4. OCR & BOOT LOGIC ---
+// ================================================================
+// 4. ROBUST OCR FOR DOTTED / DOT-MATRIX PRODUCT CODES
+// ================================================================
+
 let ocrWorker = null;
+let ocrReady = false;
+let ocrReadyPromise = null;
+
+const OCR_UPSCALE = 3;
+const OCR_MAX_WIDTH = 1800;
+
+// ---------------------------------------------------------------
+// OCR worker
+// ---------------------------------------------------------------
 
 async function initOCR() {
-  if (!ocrWorker) {
-    ocrWorker = await Tesseract.createWorker("eng");
-    await ocrWorker.setParameters({
-      tessedit_char_whitelist: "0123456789",
-      // 11 = SPARSE_TEXT: hunt for isolated strings anywhere in the frame
-      // instead of assuming a full page of body text.
-      tessedit_pageseg_mode: "11",
-    });
-  }
+  if (ocrReadyPromise) return ocrReadyPromise;
 
+  ocrReadyPromise = (async () => {
+    try {
+      ocrWorker = await Tesseract.createWorker("eng");
+
+      await ocrWorker.setParameters({
+        tessedit_char_whitelist: "0123456789",
+
+        // IMPORTANT:
+        // The scanner target contains ONE line of digits.
+        // PSM 7 is much better than sparse-text mode 11 here.
+        tessedit_pageseg_mode: "7",
+
+        // Treat input as numeric-looking text.
+        classify_bln_numeric_mode: "1",
+
+        // Avoid language dictionary interference.
+        load_system_dawg: "0",
+        load_freq_dawg: "0",
+
+        // Tell Tesseract that the image is high resolution.
+        user_defined_dpi: "300",
+      });
+
+      ocrReady = true;
+      console.log("OCR ready");
+    } catch (err) {
+      console.error("OCR initialization failed:", err);
+      ocrReady = false;
+      throw err;
+    }
+  })();
+
+  return ocrReadyPromise;
+}
+
+// ---------------------------------------------------------------
+// Camera
+// ---------------------------------------------------------------
+
+async function initCamera() {
   const video = document.getElementById("camera-feed");
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", focusMode: "continuous" },
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false,
     });
+
     video.srcObject = stream;
+
+    await new Promise((resolve) => {
+      if (video.readyState >= 2) {
+        resolve();
+      } else {
+        video.addEventListener("loadedmetadata", resolve, { once: true });
+      }
+    });
   } catch (err) {
-    console.error("Camera denied", err);
+    console.error("Camera denied:", err);
+    alert("Camera permission is required.");
   }
-
-  document
-    .getElementById("scan-trigger-btn")
-    .addEventListener("click", captureAndRead);
 }
 
 // ---------------------------------------------------------------
-// Dot-matrix / pin-stamp preprocessing
-//
-// Individual printed dots need to be fused into solid strokes
-// before any OCR engine stands a chance. The pipeline is:
-//   1. Downscale to a sane working size (keeps pixel loops fast)
-//   2. Grayscale
-//   3. Fast separable box blur -> merges nearby dots into blobs
-//   4. Otsu threshold -> re-binarizes the blur back into crisp text
-//   5. Light separable dilation -> closes any remaining gaps
-//      *within* a character without bridging adjacent characters
-//   6. Cheap GPU upscale (canvas drawImage) before handing to Tesseract
-//
-// Because we know every valid code ahead of time (PRODUCT_CATALOG),
-// we try a few blur/dilate strengths and keep the first result that
-// actually matches a real catalog code — much more robust than
-// betting everything on one fixed filter setting.
+// Utility
 // ---------------------------------------------------------------
 
-const PRE_MAX_DIM = 1400; // cap working resolution so pixel loops stay fast on mobile
-const PRE_UPSCALE = 2; // final upscale before OCR (hardware-accelerated, cheap)
-
-const PRE_VARIANTS = [
-  { blur: 1, dilate: 1 },
-  { blur: 2, dilate: 1 },
-  { blur: 2, dilate: 2 },
-  { blur: 3, dilate: 1 },
-];
-
-function clamp(v, lo, hi) {
-  return v < lo ? lo : v > hi ? hi : v;
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
 }
 
-function buildWorkingCanvas(sourceCanvas) {
-  const srcW = sourceCanvas.width;
-  const srcH = sourceCanvas.height;
-  const scale = Math.min(1, PRE_MAX_DIM / Math.max(srcW, srcH));
-  const w = Math.max(1, Math.round(srcW * scale));
-  const h = Math.max(1, Math.round(srcH * scale));
-
-  const working = document.createElement("canvas");
-  working.width = w;
-  working.height = h;
-  working.getContext("2d").drawImage(sourceCanvas, 0, 0, w, h);
-  return working;
+function createCanvas(width, height) {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width));
+  canvas.height = Math.max(1, Math.round(height));
+  return canvas;
 }
 
-function toGrayscale(ctx, w, h) {
-  const px = ctx.getImageData(0, 0, w, h).data;
-  const gray = new Float32Array(w * h);
-  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
-    gray[j] = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+// ---------------------------------------------------------------
+// Crop ONLY the scan target
+//
+// This is a major improvement over processing the entire camera frame.
+// ---------------------------------------------------------------
+
+function captureScanRegion(video) {
+  const videoRect = video.getBoundingClientRect();
+  const target = document.querySelector(".scan-target");
+
+  if (!target) {
+    const canvas = createCanvas(video.videoWidth, video.videoHeight);
+    canvas
+      .getContext("2d")
+      .drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas;
   }
+
+  const targetRect = target.getBoundingClientRect();
+
+  // Convert CSS coordinates -> actual camera pixels.
+  const scaleX = video.videoWidth / videoRect.width;
+  const scaleY = video.videoHeight / videoRect.height;
+
+  let sx = (targetRect.left - videoRect.left) * scaleX;
+  let sy = (targetRect.top - videoRect.top) * scaleY;
+  let sw = targetRect.width * scaleX;
+  let sh = targetRect.height * scaleY;
+
+  // Add margin around the target so dots are never clipped.
+  const marginX = sw * 0.18;
+  const marginY = sh * 0.70;
+
+  sx -= marginX;
+  sy -= marginY;
+  sw += marginX * 2;
+  sh += marginY * 2;
+
+  sx = clamp(sx, 0, video.videoWidth - 1);
+  sy = clamp(sy, 0, video.videoHeight - 1);
+
+  sw = clamp(sw, 1, video.videoWidth - sx);
+  sh = clamp(sh, 1, video.videoHeight - sy);
+
+  // Upscale immediately.
+  const scale = Math.min(
+    OCR_UPSCALE,
+    OCR_MAX_WIDTH / Math.max(1, sw)
+  );
+
+  const canvas = createCanvas(sw * scale, sh * scale);
+
+  const ctx = canvas.getContext("2d", {
+    willReadFrequently: true,
+  });
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.drawImage(
+    video,
+    sx,
+    sy,
+    sw,
+    sh,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  return canvas;
+}
+
+// ---------------------------------------------------------------
+// Grayscale
+// ---------------------------------------------------------------
+
+function toGrayscale(ctx, width, height) {
+  const data = ctx.getImageData(0, 0, width, height).data;
+  const gray = new Float32Array(width * height);
+
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    gray[p] =
+      data[i] * 0.299 +
+      data[i + 1] * 0.587 +
+      data[i + 2] * 0.114;
+  }
+
   return gray;
 }
 
-// Separable box blur via running sum — O(w*h), cost independent of radius.
-function boxBlur(src, w, h, radius) {
+// ---------------------------------------------------------------
+// Box blur
+// ---------------------------------------------------------------
+
+function boxBlur(src, width, height, radius) {
   if (radius <= 0) return src;
-  const tmp = new Float32Array(w * h);
-  const out = new Float32Array(w * h);
+
+  const tmp = new Float32Array(width * height);
+  const out = new Float32Array(width * height);
   const size = radius * 2 + 1;
 
-  for (let y = 0; y < h; y++) {
-    const rowOff = y * w;
+  // Horizontal
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+
     let sum = 0;
-    for (let x = -radius; x <= radius; x++)
-      sum += src[rowOff + clamp(x, 0, w - 1)];
-    for (let x = 0; x < w; x++) {
-      tmp[rowOff + x] = sum / size;
+
+    for (let x = -radius; x <= radius; x++) {
+      sum += src[row + clamp(x, 0, width - 1)];
+    }
+
+    for (let x = 0; x < width; x++) {
+      tmp[row + x] = sum / size;
+
       sum +=
-        src[rowOff + clamp(x + radius + 1, 0, w - 1)] -
-        src[rowOff + clamp(x - radius, 0, w - 1)];
+        src[row + clamp(x + radius + 1, 0, width - 1)] -
+        src[row + clamp(x - radius, 0, width - 1)];
     }
   }
 
-  for (let x = 0; x < w; x++) {
+  // Vertical
+  for (let x = 0; x < width; x++) {
     let sum = 0;
-    for (let y = -radius; y <= radius; y++)
-      sum += tmp[clamp(y, 0, h - 1) * w + x];
-    for (let y = 0; y < h; y++) {
-      out[y * w + x] = sum / size;
+
+    for (let y = -radius; y <= radius; y++) {
+      sum += tmp[clamp(y, 0, height - 1) * width + x];
+    }
+
+    for (let y = 0; y < height; y++) {
+      out[y * width + x] = sum / size;
+
       sum +=
-        tmp[clamp(y + radius + 1, 0, h - 1) * w + x] -
-        tmp[clamp(y - radius, 0, h - 1) * w + x];
+        tmp[clamp(y + radius + 1, 0, height - 1) * width + x] -
+        tmp[clamp(y - radius, 0, height - 1) * width + x];
     }
   }
+
   return out;
-}
-
-function otsuThreshold(gray) {
-  const hist = new Array(256).fill(0);
-  for (let i = 0; i < gray.length; i++) hist[gray[i] | 0]++;
-  const total = gray.length;
-
-  let sum = 0;
-  for (let t = 0; t < 256; t++) sum += t * hist[t];
-
-  let sumB = 0,
-    wB = 0,
-    maxVar = 0,
-    threshold = 127;
-  for (let t = 0; t < 256; t++) {
-    wB += hist[t];
-    if (wB === 0) continue;
-    const wF = total - wB;
-    if (wF === 0) break;
-    sumB += t * hist[t];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const varBetween = wB * wF * (mB - mF) * (mB - mF);
-    if (varBetween > maxVar) {
-      maxVar = varBetween;
-      threshold = t;
-    }
-  }
-  return threshold;
-}
-
-function binarize(gray, threshold) {
-  const out = new Uint8Array(gray.length);
-  for (let i = 0; i < gray.length; i++) out[i] = gray[i] < threshold ? 0 : 255; // 0 = ink
-  return out;
-}
-
-// Cheap separable min-filter dilation, run for N iterations. Grows dark
-// (ink) pixels to fuse gaps between dots within one glyph, one ring at
-// a time, without leaping across the (larger) gaps between characters.
-function dilateBinary(bin, w, h, iterations) {
-  let cur = bin;
-  for (let it = 0; it < iterations; it++) {
-    const tmp = new Uint8Array(w * h);
-    for (let y = 0; y < h; y++) {
-      const rowOff = y * w;
-      for (let x = 0; x < w; x++) {
-        tmp[rowOff + x] = Math.min(
-          cur[rowOff + clamp(x - 1, 0, w - 1)],
-          cur[rowOff + x],
-          cur[rowOff + clamp(x + 1, 0, w - 1)],
-        );
-      }
-    }
-    const out = new Uint8Array(w * h);
-    for (let x = 0; x < w; x++) {
-      for (let y = 0; y < h; y++) {
-        out[y * w + x] = Math.min(
-          tmp[clamp(y - 1, 0, h - 1) * w + x],
-          tmp[y * w + x],
-          tmp[clamp(y + 1, 0, h - 1) * w + x],
-        );
-      }
-    }
-    cur = out;
-  }
-  return cur;
-}
-
-function buildOcrCanvas(binary, w, h) {
-  const bwCanvas = document.createElement("canvas");
-  bwCanvas.width = w;
-  bwCanvas.height = h;
-  const bctx = bwCanvas.getContext("2d");
-  const imgData = bctx.createImageData(w, h);
-  for (let i = 0, j = 0; i < binary.length; i++, j += 4) {
-    const v = binary[i];
-    imgData.data[j] = v;
-    imgData.data[j + 1] = v;
-    imgData.data[j + 2] = v;
-    imgData.data[j + 3] = 255;
-  }
-  bctx.putImageData(imgData, 0, 0);
-
-  const finalCanvas = document.createElement("canvas");
-  finalCanvas.width = w * PRE_UPSCALE;
-  finalCanvas.height = h * PRE_UPSCALE;
-  const fctx = finalCanvas.getContext("2d");
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(bwCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-  return finalCanvas;
-}
-
-function preprocessVariant(sourceCanvas, { blur, dilate }) {
-  const working = buildWorkingCanvas(sourceCanvas);
-  const w = working.width,
-    h = working.height;
-  const wctx = working.getContext("2d");
-
-  const gray = toGrayscale(wctx, w, h);
-  const blurred = boxBlur(gray, w, h, blur);
-  const threshold = otsuThreshold(blurred);
-  const bin = binarize(blurred, threshold);
-  const dilated = dilateBinary(bin, w, h, dilate);
-
-  return buildOcrCanvas(dilated, w, h);
 }
 
 // ---------------------------------------------------------------
-// Capture + multi-pass recognition
+// Dark-pixel dilation.
+//
+// This is especially useful for dot-matrix printing.
+// It makes:
+//
+//      . . . .       ->       █████
+//
+// without requiring the original print to be continuous.
+// ---------------------------------------------------------------
+
+function darkDilate(gray, width, height, radius) {
+  if (radius <= 0) return gray;
+
+  const horizontal = new Float32Array(width * height);
+  const output = new Float32Array(width * height);
+
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+
+    for (let x = 0; x < width; x++) {
+      let minValue = 255;
+
+      for (
+        let xx = Math.max(0, x - radius);
+        xx <= Math.min(width - 1, x + radius);
+        xx++
+      ) {
+        minValue = Math.min(minValue, gray[row + xx]);
+      }
+
+      horizontal[row + x] = minValue;
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let minValue = 255;
+
+      for (
+        let yy = Math.max(0, y - radius);
+        yy <= Math.min(height - 1, y + radius);
+        yy++
+      ) {
+        minValue = Math.min(
+          minValue,
+          horizontal[yy * width + x]
+        );
+      }
+
+      output[y * width + x] = minValue;
+    }
+  }
+
+  return output;
+}
+
+// ---------------------------------------------------------------
+// Otsu threshold
+// ---------------------------------------------------------------
+
+function otsuThreshold(gray) {
+  const hist = new Array(256).fill(0);
+
+  for (let i = 0; i < gray.length; i++) {
+    hist[Math.max(0, Math.min(255, gray[i] | 0))]++;
+  }
+
+  const total = gray.length;
+
+  let totalSum = 0;
+
+  for (let i = 0; i < 256; i++) {
+    totalSum += i * hist[i];
+  }
+
+  let sumBackground = 0;
+  let weightBackground = 0;
+
+  let bestVariance = -1;
+  let bestThreshold = 127;
+
+  for (let t = 0; t < 256; t++) {
+    weightBackground += hist[t];
+
+    if (weightBackground === 0) continue;
+
+    const weightForeground = total - weightBackground;
+
+    if (weightForeground === 0) break;
+
+    sumBackground += t * hist[t];
+
+    const meanBackground =
+      sumBackground / weightBackground;
+
+    const meanForeground =
+      (totalSum - sumBackground) / weightForeground;
+
+    const variance =
+      weightBackground *
+      weightForeground *
+      Math.pow(meanBackground - meanForeground, 2);
+
+    if (variance > bestVariance) {
+      bestVariance = variance;
+      bestThreshold = t;
+    }
+  }
+
+  return bestThreshold;
+}
+
+// ---------------------------------------------------------------
+// Adaptive threshold
+//
+// More reliable when the paper/label has uneven lighting.
+// ---------------------------------------------------------------
+
+function adaptiveThreshold(
+  gray,
+  width,
+  height,
+  radius,
+  offset
+) {
+  const localMean = boxBlur(gray, width, height, radius);
+  const result = new Uint8Array(width * height);
+
+  for (let i = 0; i < gray.length; i++) {
+    result[i] =
+      gray[i] < localMean[i] - offset
+        ? 0
+        : 255;
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------
+// Convert binary pixels to image canvas
+// ---------------------------------------------------------------
+
+function binaryToCanvas(binary, width, height) {
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d", {
+    willReadFrequently: true,
+  });
+
+  const image = ctx.createImageData(width, height);
+
+  for (let i = 0, p = 0; i < binary.length; i++, p += 4) {
+    const v = binary[i];
+
+    image.data[p] = v;
+    image.data[p + 1] = v;
+    image.data[p + 2] = v;
+    image.data[p + 3] = 255;
+  }
+
+  ctx.putImageData(image, 0, 0);
+
+  return canvas;
+}
+
+// ---------------------------------------------------------------
+// Preprocessing variant
+// ---------------------------------------------------------------
+
+function preprocessDottedImage(
+  sourceCanvas,
+  options
+) {
+  const width = sourceCanvas.width;
+  const height = sourceCanvas.height;
+
+  const ctx = sourceCanvas.getContext("2d", {
+    willReadFrequently: true,
+  });
+
+  const gray = toGrayscale(ctx, width, height);
+
+  // First enlarge/darken dots.
+  const merged = darkDilate(
+    gray,
+    width,
+    height,
+    options.dotRadius
+  );
+
+  let binary;
+
+  if (options.adaptive) {
+    binary = adaptiveThreshold(
+      merged,
+      width,
+      height,
+      options.blurRadius,
+      options.offset
+    );
+  } else {
+    const blurred = boxBlur(
+      merged,
+      width,
+      height,
+      options.blurRadius
+    );
+
+    const threshold = otsuThreshold(blurred);
+
+    binary = new Uint8Array(width * height);
+
+    for (let i = 0; i < blurred.length; i++) {
+      binary[i] =
+        blurred[i] < threshold ? 0 : 255;
+    }
+  }
+
+  // Final dot/stroke fusion.
+  if (options.finalDilate > 0) {
+    // Convert binary back to gray so darkDilate can be reused.
+    const temp = new Float32Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+      temp[i] = binary[i];
+    }
+
+    const mergedBinary = darkDilate(
+      temp,
+      width,
+      height,
+      options.finalDilate
+    );
+
+    for (let i = 0; i < mergedBinary.length; i++) {
+      binary[i] = mergedBinary[i] < 128 ? 0 : 255;
+    }
+  }
+
+  return binaryToCanvas(binary, width, height);
+}
+
+// ---------------------------------------------------------------
+// OCR variants
+//
+// Different cameras/labels need different amounts of dot fusion.
+// ---------------------------------------------------------------
+
+const OCR_VARIANTS = [
+  {
+    name: "adaptive-light",
+    dotRadius: 1,
+    blurRadius: 2,
+    offset: 8,
+    finalDilate: 1,
+    adaptive: true,
+  },
+
+  {
+    name: "adaptive-medium",
+    dotRadius: 2,
+    blurRadius: 3,
+    offset: 10,
+    finalDilate: 1,
+    adaptive: true,
+  },
+
+  {
+    name: "adaptive-strong",
+    dotRadius: 2,
+    blurRadius: 4,
+    offset: 12,
+    finalDilate: 2,
+    adaptive: true,
+  },
+
+  {
+    name: "otsu-medium",
+    dotRadius: 2,
+    blurRadius: 2,
+    offset: 0,
+    finalDilate: 2,
+    adaptive: false,
+  },
+
+  {
+    name: "otsu-strong",
+    dotRadius: 3,
+    blurRadius: 3,
+    offset: 0,
+    finalDilate: 2,
+    adaptive: false,
+  },
+];
+
+// ---------------------------------------------------------------
+// Normalize OCR output
+// ---------------------------------------------------------------
+
+function normalizeOCRText(text) {
+  return String(text || "")
+    .replace(/O/gi, "0")
+    .replace(/I/gi, "1")
+    .replace(/L/gi, "1")
+    .replace(/S/gi, "5")
+    .replace(/B/gi, "8")
+    .replace(/[^0-9]/g, "");
+}
+
+// ---------------------------------------------------------------
+// Levenshtein distance
+// ---------------------------------------------------------------
+
+function levenshtein(a, b) {
+  const rows = b.length + 1;
+  const cols = a.length + 1;
+
+  const dp = new Array(rows);
+
+  for (let i = 0; i < rows; i++) {
+    dp[i] = new Array(cols).fill(0);
+    dp[i][0] = i;
+  }
+
+  for (let j = 0; j < cols; j++) {
+    dp[0][j] = j;
+  }
+
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[rows - 1][cols - 1];
+}
+
+// ---------------------------------------------------------------
+// Find the closest REAL catalog code.
+//
+// This is extremely important.
+//
+// Example:
+//
+// OCR -> 32400
+// Catalog -> 324000
+//
+// OCR -> 32400O
+// Catalog -> 324000
+//
+// OCR -> 324008
+// Catalog -> 324000
+//
+// We can safely correct it because the valid codes are already
+// present in PRODUCT_CATALOG.
+// ---------------------------------------------------------------
+
+function matchCatalogCode(rawText) {
+  const digits = normalizeOCRText(rawText);
+
+  if (!digits) return null;
+
+  const catalogCodes = Object.keys(PRODUCT_CATALOG).filter(
+    (code) => /^\d+$/.test(code)
+  );
+
+  // ------------------------------------------------------------
+  // 1. Exact match anywhere.
+  // ------------------------------------------------------------
+
+  for (const code of catalogCodes) {
+    if (digits.includes(code)) {
+      return code;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 2. Try numeric sequences from OCR.
+  // ------------------------------------------------------------
+
+  const candidates = new Set();
+
+  const tokenMatches =
+    String(rawText).match(/\d{4,10}/g) || [];
+
+  tokenMatches.forEach((token) => {
+    candidates.add(token);
+  });
+
+  // Also scan every possible substring.
+  for (let len = 5; len <= 8; len++) {
+    for (let i = 0; i + len <= digits.length; i++) {
+      candidates.add(digits.slice(i, i + len));
+    }
+  }
+
+  let bestCode = null;
+  let bestScore = Infinity;
+
+  for (const candidate of candidates) {
+    for (const code of catalogCodes) {
+      // Don't compare wildly different lengths.
+      if (Math.abs(candidate.length - code.length) > 1) {
+        continue;
+      }
+
+      const distance = levenshtein(candidate, code);
+
+      // Very conservative fuzzy matching.
+      let allowed = 0;
+
+      if (code.length >= 7) {
+        allowed = 2;
+      } else if (code.length >= 5) {
+        allowed = 1;
+      }
+
+      if (distance <= allowed) {
+        const lengthPenalty =
+          Math.abs(candidate.length - code.length) * 0.5;
+
+        const score = distance + lengthPenalty;
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestCode = code;
+        }
+      }
+    }
+  }
+
+  return bestCode;
+}
+
+// ---------------------------------------------------------------
+// OCR one image with multiple page segmentation modes.
+//
+// Even though PSM 7 is the default worker setting, trying 8 and
+// 13 gives the dotted font a couple of different recognition
+// strategies.
+// ---------------------------------------------------------------
+
+async function recognizeCanvas(canvas) {
+  const psmModes = ["7", "8", "13"];
+
+  let bestText = "";
+
+  for (const psm of psmModes) {
+    await ocrWorker.setParameters({
+      tessedit_pageseg_mode: psm,
+      tessedit_char_whitelist: "0123456789",
+      classify_bln_numeric_mode: "1",
+      load_system_dawg: "0",
+      load_freq_dawg: "0",
+      user_defined_dpi: "300",
+    });
+
+    const result = await ocrWorker.recognize(canvas);
+
+    const text = result?.data?.text || "";
+
+    if (text.length > bestText.length) {
+      bestText = text;
+    }
+
+    const matched = matchCatalogCode(text);
+
+    if (matched) {
+      return {
+        text,
+        matched,
+        psm,
+      };
+    }
+  }
+
+  return {
+    text: bestText,
+    matched: matchCatalogCode(bestText),
+    psm: null,
+  };
+}
+
+// ---------------------------------------------------------------
+// Capture + OCR
 // ---------------------------------------------------------------
 
 async function captureAndRead() {
   const video = document.getElementById("camera-feed");
-  const canvas = document.getElementById("capture-canvas");
-  const ctx = canvas.getContext("2d");
   const btn = document.getElementById("scan-trigger-btn");
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (!video.videoWidth || !video.videoHeight) {
+    alert("Camera is not ready yet.");
+    return;
+  }
 
-  btn.textContent = "⏳ Processing...";
   btn.disabled = true;
+  btn.textContent = "⏳ Reading...";
 
   try {
+    await initOCR();
+
+    // IMPORTANT:
+    // Crop to the scan target rather than OCR the entire frame.
+    const scanCanvas = captureScanRegion(video);
+
+    console.log(
+      "OCR image:",
+      scanCanvas.width,
+      "x",
+      scanCanvas.height
+    );
+
     let matchedCode = null;
+    let lastText = "";
     let lastCandidates = [];
 
-    for (const variant of PRE_VARIANTS) {
-      const ocrCanvas = preprocessVariant(canvas, variant);
-      const {
-        data: { text },
-      } = await ocrWorker.recognize(ocrCanvas);
-      const foundNumbers = text.match(/\b\d{5,8}\b/g) || [];
-      if (foundNumbers.length) lastCandidates = foundNumbers;
+    // Try every preprocessing version.
+    for (const variant of OCR_VARIANTS) {
+      console.log("Trying OCR variant:", variant.name);
 
-      const hit = foundNumbers.find((num) => PRODUCT_CATALOG[num]);
-      if (hit) {
-        matchedCode = hit;
+      const processed = preprocessDottedImage(
+        scanCanvas,
+        variant
+      );
+
+      const result = await recognizeCanvas(processed);
+
+      const text = result.text || "";
+
+      if (text) {
+        lastText = text;
+
+        const candidates =
+          text.match(/\d{4,10}/g) || [];
+
+        if (candidates.length) {
+          lastCandidates = candidates;
+        }
+
+        console.log(
+          variant.name,
+          "OCR:",
+          JSON.stringify(text),
+          "match:",
+          result.matched
+        );
+      }
+
+      if (result.matched) {
+        matchedCode = result.matched;
+
+        console.log(
+          "MATCHED CATALOG CODE:",
+          matchedCode
+        );
+
         break;
       }
     }
 
+    // ----------------------------------------------------------
+    // SUCCESS
+    // ----------------------------------------------------------
+
     if (matchedCode) {
       App.openConfirmSheet(matchedCode);
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // FAILURE
+    // ----------------------------------------------------------
+
+    App.triggerFeedback("error");
+
+    console.warn(
+      "OCR failed.",
+      "Last text:",
+      lastText,
+      "Candidates:",
+      lastCandidates
+    );
+
+    if (lastCandidates.length) {
+      document.getElementById("manual-code").value =
+        lastCandidates[0];
+
+      document
+        .getElementById("manual-modal")
+        .classList.add("active");
     } else {
-      App.triggerFeedback("error");
-      if (lastCandidates.length) {
-        // Read *something* but it didn't match a known code — hand it to
-        // manual entry pre-filled so the user only has to fix a digit or two
-        // instead of retyping the whole thing.
-        document.getElementById("manual-code").value = lastCandidates[0];
-        document.getElementById("manual-modal").classList.add("active");
-      } else {
-        alert(
-          "Code not recognized. Move closer and keep the code flat/in focus.",
-        );
-      }
+      alert(
+        "Code not recognized.\n\n" +
+        "Place the dotted code inside the dashed box, " +
+        "move slightly closer, and tap Scan again."
+      );
     }
   } catch (err) {
-    console.error("OCR Failed", err);
+    console.error("OCR Failed:", err);
+
+    App.triggerFeedback("error");
+
+    alert(
+      "OCR error. Please refresh the page and try again."
+    );
   } finally {
-    btn.textContent = "📸 Tap to Scan Code";
     btn.disabled = false;
+    btn.textContent = "📸 Tap to Scan Code";
   }
 }
 
-// Single initialization call
+// ---------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------
+
 window.addEventListener("DOMContentLoaded", async () => {
   await App.start();
-  initOCR();
+
+  // Start camera and OCR in parallel.
+  await Promise.allSettled([
+    initCamera(),
+    initOCR(),
+  ]);
+
+  const button =
+    document.getElementById("scan-trigger-btn");
+
+  button.addEventListener("click", captureAndRead);
 });
