@@ -24,6 +24,7 @@
   </header>
 
   <main id="app-content">
+    <!-- Scanner View -->
     <section id="scanner-view" class="view-panel active">
       <div class="qty-selector-container">
         <span class="qty-label">Batch:</span>
@@ -46,29 +47,26 @@
       <div id="last-scanned-card" class="dense-card empty">
         <div class="empty-placeholder">
           <div class="pulse-icon">📷</div>
-          <p>Scan a Dulux paint tin barcode...</p>
+          <p>Scan a Dulux barcode...</p>
         </div>
       </div>
     </section>
 
+    <!-- Inventory View -->
     <section id="inventory-view" class="view-panel">
       <div class="search-bar-wrapper">
         <input type="search" id="inventory-search" placeholder="Search product or code..." />
       </div>
-      <div class="table-container">
-        <table id="inventory-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th style="text-align: right;">Qty</th>
-            </tr>
-          </thead>
-          <tbody id="inventory-rows"></tbody>
-        </table>
-      </div>
+      
+      <!-- Card-based list for swipe gestures -->
+      <div id="inventory-list" class="inventory-list"></div>
+      
+      <!-- Manual Add Button -->
+      <button class="fab-btn" id="manual-add-btn">+ Add Custom</button>
     </section>
   </main>
 
+  <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <button class="nav-tab active" data-mode="in">
       <span class="tab-icon">📥</span>
@@ -83,6 +81,20 @@
       <span class="tab-label">Inventory</span>
     </button>
   </nav>
+
+  <!-- Manual Entry Modal -->
+  <div id="manual-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Add Custom Product</h3>
+      <input type="text" id="manual-code" placeholder="Barcode / ID" />
+      <input type="text" id="manual-name" placeholder="Product Name" />
+      <input type="number" id="manual-qty" placeholder="Quantity" value="1" min="1" />
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="App.closeManualModal()">Cancel</button>
+        <button class="btn-save" onclick="App.saveManualItem()">Save Stock</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
   <script>
