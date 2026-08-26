@@ -43,7 +43,10 @@ const RAW_CATALOG = [
   { c: "309096", n: "DN VT Platinum Glo Yellow 96 Base" },
   { c: "309097", n: "DN VT Platinum Glo Red 97 Base" },
   { c: "5832271/78/85/92", n: "Dulux SuperClean 3in1 MR Brilliant White" },
-  { c: "5832299/306/313/320 & 5910851", n: "Dulux SuperClean 3in1 MR White 90 Base" },
+  {
+    c: "5832299/306/313/320 & 5910851",
+    n: "Dulux SuperClean 3in1 MR White 90 Base",
+  },
   { c: "5832327/34/41/48 & 5910851", n: "Dulux SuperClean 3in1 MR 92 Base" },
   { c: "5832355/362/369/472 & 5910852", n: "Dulux SuperClean 3in1 MR 93 Base" },
   { c: "5832479/486/493/500 & 5910853", n: "Dulux SuperClean 3in1 MR 94 Base" },
@@ -87,11 +90,20 @@ const RAW_CATALOG = [
   { c: "5478923/24", n: "DN WS Signature Black Diamond" },
   { c: "5960727/5961028/29", n: "DN WS Protect Metallic Silver" },
   { c: "5748677/5748708", n: "Aquatech PU Coat (15 Years)" },
-  { c: "77009072/71/5847766/77009081", n: "Aquatech Flexible Basecoat Advance (12 Years)" },
-  { c: "78009072/71/5847765/7800907281", n: "Aquatech Flexible Basecoat Neo (10 Years)" },
+  {
+    c: "77009072/71/5847766/77009081",
+    n: "Aquatech Flexible Basecoat Advance (12 Years)",
+  },
+  {
+    c: "78009072/71/5847765/7800907281",
+    n: "Aquatech Flexible Basecoat Neo (10 Years)",
+  },
   { c: "5908363-66", n: "Aquatech Damp Protect 2in1 (8 Years)" },
   { c: "5580864-67", n: "Aquatech Damp Protect Basecoat (5 Years)" },
-  { c: "82000072/71/5882382/82000081", n: "Aquatech Roof Waterproof White (12 Years)" },
+  {
+    c: "82000072/71/5882382/82000081",
+    n: "Aquatech Roof Waterproof White (12 Years)",
+  },
   { c: "83009072/71", n: "Aquatech Damp Cure (5 Years)" },
   { c: "81019005/15", n: "Aquatech Waterblock 2K (5 Years)" },
   { c: "5964276/77", n: "Aquatech Crackfiller Paste 5MM" },
@@ -124,7 +136,7 @@ const RAW_CATALOG = [
   { c: "6457592", n: 'Dulux Signature Brush Double 3"' },
   { c: "6457575", n: 'Dulux Signature Epoxy Int. Roller 9"' },
   { c: "5953877", n: "DN WS Texture Rustic 90 25kg" },
-  { c: "5993730", n: "DN WS Texture Dholpur 25kg" }
+  { c: "5993730", n: "DN WS Texture Dholpur 25kg" },
 ];
 
 const PRODUCT_CATALOG = {};
@@ -138,14 +150,22 @@ function inflateCatalog() {
     parts.forEach((part) => {
       if (part.includes("-")) {
         const dashParts = part.split("-");
-        if (dashParts.length === 2 && dashParts[0].length > dashParts[1].length) {
+        if (
+          dashParts.length === 2 &&
+          dashParts[0].length > dashParts[1].length
+        ) {
           const start = dashParts[0];
           const end = dashParts[1];
           if (start.length >= 5) lastFullCode = start;
 
-          const prefix = lastFullCode.slice(0, lastFullCode.length - end.length);
-          const fullStart = start.length < 5
-              ? lastFullCode.slice(0, lastFullCode.length - start.length) + start
+          const prefix = lastFullCode.slice(
+            0,
+            lastFullCode.length - end.length,
+          );
+          const fullStart =
+            start.length < 5
+              ? lastFullCode.slice(0, lastFullCode.length - start.length) +
+                start
               : start;
 
           const startNum = parseInt(fullStart, 10);
@@ -165,7 +185,10 @@ function inflateCatalog() {
           lastFullCode = part;
           PRODUCT_CATALOG[part] = { name: item.n };
         } else {
-          const prefix = lastFullCode.slice(0, lastFullCode.length - part.length);
+          const prefix = lastFullCode.slice(
+            0,
+            lastFullCode.length - part.length,
+          );
           PRODUCT_CATALOG[prefix + part] = { name: item.n };
         }
       }
@@ -198,13 +221,19 @@ class CoatCountDB {
   }
   async getItem(code) {
     return new Promise((resolve) => {
-      const req = this.db.transaction(["inventory"], "readonly").objectStore("inventory").get(String(code).trim());
+      const req = this.db
+        .transaction(["inventory"], "readonly")
+        .objectStore("inventory")
+        .get(String(code).trim());
       req.onsuccess = () => resolve(req.result || null);
     });
   }
   async getAllItems() {
     return new Promise((resolve) => {
-      const req = this.db.transaction(["inventory"], "readonly").objectStore("inventory").getAll();
+      const req = this.db
+        .transaction(["inventory"], "readonly")
+        .objectStore("inventory")
+        .getAll();
       req.onsuccess = () => resolve(req.result || []);
     });
   }
@@ -243,9 +272,11 @@ const App = {
       tab.addEventListener("click", () => this.setMode(tab.dataset.mode));
     });
 
-    document.getElementById("inventory-search")?.addEventListener("input", (e) => {
-      this.renderInventory(e.target.value);
-    });
+    document
+      .getElementById("inventory-search")
+      ?.addEventListener("input", (e) => {
+        this.renderInventory(e.target.value);
+      });
 
     document.getElementById("manual-add-btn").addEventListener("click", () => {
       document.getElementById("manual-modal").classList.add("active");
@@ -281,24 +312,32 @@ const App = {
     let currentTranslate = 0;
     let maxTranslate = 0;
 
-    thumb.addEventListener("touchstart", (e) => {
-      isDragging = true;
-      startX = e.touches[0].clientX;
-      maxTranslate = track.offsetWidth - thumb.offsetWidth - 8;
-      thumb.style.transition = "none";
-    }, { passive: true });
+    thumb.addEventListener(
+      "touchstart",
+      (e) => {
+        isDragging = true;
+        startX = e.touches[0].clientX;
+        maxTranslate = track.offsetWidth - thumb.offsetWidth - 8;
+        thumb.style.transition = "none";
+      },
+      { passive: true },
+    );
 
-    thumb.addEventListener("touchmove", (e) => {
-      if (!isDragging) return;
-      const currentX = e.touches[0].clientX;
-      currentTranslate = currentX - startX;
+    thumb.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!isDragging) return;
+        const currentX = e.touches[0].clientX;
+        currentTranslate = currentX - startX;
 
-      if (currentTranslate < 0) currentTranslate = 0;
-      if (currentTranslate > maxTranslate) currentTranslate = maxTranslate;
+        if (currentTranslate < 0) currentTranslate = 0;
+        if (currentTranslate > maxTranslate) currentTranslate = maxTranslate;
 
-      thumb.style.transform = `translateX(${currentTranslate}px)`;
-      text.style.opacity = 1 - currentTranslate / maxTranslate;
-    }, { passive: true });
+        thumb.style.transform = `translateX(${currentTranslate}px)`;
+        text.style.opacity = 1 - currentTranslate / maxTranslate;
+      },
+      { passive: true },
+    );
 
     thumb.addEventListener("touchend", () => {
       isDragging = false;
@@ -317,9 +356,12 @@ const App = {
     this.currentMode = mode;
     document.body.className = `mode-${mode}`;
     const badge = document.getElementById("mode-indicator");
-    badge.textContent = mode === "in" ? "STOCK IN" : mode === "out" ? "STOCK OUT" : "INVENTORY";
+    badge.textContent =
+      mode === "in" ? "STOCK IN" : mode === "out" ? "STOCK OUT" : "INVENTORY";
 
-    document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.mode === mode));
+    document
+      .querySelectorAll(".nav-tab")
+      .forEach((t) => t.classList.toggle("active", t.dataset.mode === mode));
     const isInv = mode === "inventory";
     document.getElementById("scanner-view").classList.toggle("active", !isInv);
     document.getElementById("inventory-view").classList.toggle("active", isInv);
@@ -327,20 +369,24 @@ const App = {
   },
 
   triggerFeedback(mode) {
-    if (navigator.vibrate) navigator.vibrate(mode === "error" ? [50, 50] : [30]);
+    if (navigator.vibrate)
+      navigator.vibrate(mode === "error" ? [50, 50] : [30]);
     const overlay = document.getElementById("swipe-overlay");
     overlay.className = "swipe-effect";
     void overlay.offsetWidth;
     overlay.className = `swipe-effect active swipe-${mode}`;
-    setTimeout(() => { overlay.className = "swipe-effect"; }, 400);
+    setTimeout(() => {
+      overlay.className = "swipe-effect";
+    }, 400);
   },
 
   openConfirmSheet(code) {
     this.pendingItem = { code: code, ...PRODUCT_CATALOG[code] };
     document.getElementById("confirm-name").textContent = this.pendingItem.name;
     document.getElementById("confirm-code").textContent = `Code: ${code}`;
-    document.getElementById("confirm-mode-text").textContent = this.currentMode === "in" ? "Add" : "Sell";
-    
+    document.getElementById("confirm-mode-text").textContent =
+      this.currentMode === "in" ? "Add" : "Sell";
+
     document.getElementById("swipe-thumb").style.transform = `translateX(0px)`;
     document.getElementById("swipe-text").style.opacity = 1;
     this.selectedSize = "1L";
@@ -364,7 +410,8 @@ const App = {
       p.classList.toggle(
         "active",
         p.dataset.qty == this.selectedQty ||
-          (p.dataset.qty === "custom" && !["1", "2", "5", "10"].includes(String(this.selectedQty))),
+          (p.dataset.qty === "custom" &&
+            !["1", "2", "5", "10"].includes(String(this.selectedQty))),
       );
     });
   },
@@ -407,7 +454,8 @@ const App = {
 
     this.closeConfirmSheet();
     this.updateStats();
-    if (document.getElementById("inventory-view").classList.contains("active")) this.renderInventory();
+    if (document.getElementById("inventory-view").classList.contains("active"))
+      this.renderInventory();
   },
 
   closeManualModal() {
@@ -424,7 +472,7 @@ const App = {
     if (!code || !name) return alert("Code and Name required.");
 
     PRODUCT_CATALOG[code] = { name: name, category: "Custom Entry" };
-    
+
     // Default manual adds to "1L" size for consistency
     const uniqueId = `${code}_1L`;
 
@@ -453,7 +501,8 @@ const App = {
   async updateStats() {
     const items = await this.db.getAllItems();
     const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
-    document.getElementById("stat-summary").textContent = `${items.length} SKUs • ${totalUnits} Units`;
+    document.getElementById("stat-summary").textContent =
+      `${items.length} SKUs • ${totalUnits} Units`;
   },
 
   async renderInventory(filterQuery = "") {
@@ -463,7 +512,9 @@ const App = {
 
     if (filterQuery.trim()) {
       const q = filterQuery.toLowerCase();
-      items = items.filter((i) => i.name.toLowerCase().includes(q) || i.rawCode.includes(q));
+      items = items.filter(
+        (i) => i.name.toLowerCase().includes(q) || i.rawCode.includes(q),
+      );
     }
 
     if (items.length === 0) {
@@ -483,7 +534,7 @@ const App = {
 
       const card = document.createElement("div");
       card.className = "inventory-card";
-      
+
       // Included packSize rendering so you can distinguish identical codes with different volumes
       card.innerHTML = `
         <div class="inv-details">
@@ -506,21 +557,28 @@ const App = {
     let currentX = 0;
     const threshold = 75;
 
-    cardElement.addEventListener("touchstart", (e) => {
+    cardElement.addEventListener(
+      "touchstart",
+      (e) => {
         startX = e.touches[0].clientX;
         cardElement.style.transition = "none";
-      }, { passive: true }
+      },
+      { passive: true },
     );
 
-    cardElement.addEventListener("touchmove", (e) => {
+    cardElement.addEventListener(
+      "touchmove",
+      (e) => {
         currentX = e.touches[0].clientX - startX;
         const visualX = currentX * 0.6;
         cardElement.style.transform = `translateX(${visualX}px)`;
-      }, { passive: true }
+      },
+      { passive: true },
     );
 
     cardElement.addEventListener("touchend", async () => {
-      cardElement.style.transition = "transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)";
+      cardElement.style.transition =
+        "transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)";
 
       if (currentX > threshold) {
         cardElement.style.transform = `translateX(100%)`;
@@ -556,7 +614,12 @@ let ocrWorker = null;
 async function initOCR() {
   if (!ocrWorker) {
     ocrWorker = await Tesseract.createWorker("eng");
-    await ocrWorker.setParameters({ tessedit_char_whitelist: "0123456789" });
+    await ocrWorker.setParameters({
+      tessedit_char_whitelist: "0123456789",
+      // 11 = SPARSE_TEXT: hunt for isolated strings anywhere in the frame
+      // instead of assuming a full page of body text.
+      tessedit_pageseg_mode: "11",
+    });
   }
 
   const video = document.getElementById("camera-feed");
@@ -569,8 +632,210 @@ async function initOCR() {
     console.error("Camera denied", err);
   }
 
-  document.getElementById("scan-trigger-btn").addEventListener("click", captureAndRead);
+  document
+    .getElementById("scan-trigger-btn")
+    .addEventListener("click", captureAndRead);
 }
+
+// ---------------------------------------------------------------
+// Dot-matrix / pin-stamp preprocessing
+//
+// Individual printed dots need to be fused into solid strokes
+// before any OCR engine stands a chance. The pipeline is:
+//   1. Downscale to a sane working size (keeps pixel loops fast)
+//   2. Grayscale
+//   3. Fast separable box blur -> merges nearby dots into blobs
+//   4. Otsu threshold -> re-binarizes the blur back into crisp text
+//   5. Light separable dilation -> closes any remaining gaps
+//      *within* a character without bridging adjacent characters
+//   6. Cheap GPU upscale (canvas drawImage) before handing to Tesseract
+//
+// Because we know every valid code ahead of time (PRODUCT_CATALOG),
+// we try a few blur/dilate strengths and keep the first result that
+// actually matches a real catalog code — much more robust than
+// betting everything on one fixed filter setting.
+// ---------------------------------------------------------------
+
+const PRE_MAX_DIM = 1400; // cap working resolution so pixel loops stay fast on mobile
+const PRE_UPSCALE = 2; // final upscale before OCR (hardware-accelerated, cheap)
+
+const PRE_VARIANTS = [
+  { blur: 1, dilate: 1 },
+  { blur: 2, dilate: 1 },
+  { blur: 2, dilate: 2 },
+  { blur: 3, dilate: 1 },
+];
+
+function clamp(v, lo, hi) {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+function buildWorkingCanvas(sourceCanvas) {
+  const srcW = sourceCanvas.width;
+  const srcH = sourceCanvas.height;
+  const scale = Math.min(1, PRE_MAX_DIM / Math.max(srcW, srcH));
+  const w = Math.max(1, Math.round(srcW * scale));
+  const h = Math.max(1, Math.round(srcH * scale));
+
+  const working = document.createElement("canvas");
+  working.width = w;
+  working.height = h;
+  working.getContext("2d").drawImage(sourceCanvas, 0, 0, w, h);
+  return working;
+}
+
+function toGrayscale(ctx, w, h) {
+  const px = ctx.getImageData(0, 0, w, h).data;
+  const gray = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
+    gray[j] = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+  }
+  return gray;
+}
+
+// Separable box blur via running sum — O(w*h), cost independent of radius.
+function boxBlur(src, w, h, radius) {
+  if (radius <= 0) return src;
+  const tmp = new Float32Array(w * h);
+  const out = new Float32Array(w * h);
+  const size = radius * 2 + 1;
+
+  for (let y = 0; y < h; y++) {
+    const rowOff = y * w;
+    let sum = 0;
+    for (let x = -radius; x <= radius; x++)
+      sum += src[rowOff + clamp(x, 0, w - 1)];
+    for (let x = 0; x < w; x++) {
+      tmp[rowOff + x] = sum / size;
+      sum +=
+        src[rowOff + clamp(x + radius + 1, 0, w - 1)] -
+        src[rowOff + clamp(x - radius, 0, w - 1)];
+    }
+  }
+
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let y = -radius; y <= radius; y++)
+      sum += tmp[clamp(y, 0, h - 1) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = sum / size;
+      sum +=
+        tmp[clamp(y + radius + 1, 0, h - 1) * w + x] -
+        tmp[clamp(y - radius, 0, h - 1) * w + x];
+    }
+  }
+  return out;
+}
+
+function otsuThreshold(gray) {
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < gray.length; i++) hist[gray[i] | 0]++;
+  const total = gray.length;
+
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+  let sumB = 0,
+    wB = 0,
+    maxVar = 0,
+    threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+    if (varBetween > maxVar) {
+      maxVar = varBetween;
+      threshold = t;
+    }
+  }
+  return threshold;
+}
+
+function binarize(gray, threshold) {
+  const out = new Uint8Array(gray.length);
+  for (let i = 0; i < gray.length; i++) out[i] = gray[i] < threshold ? 0 : 255; // 0 = ink
+  return out;
+}
+
+// Cheap separable min-filter dilation, run for N iterations. Grows dark
+// (ink) pixels to fuse gaps between dots within one glyph, one ring at
+// a time, without leaping across the (larger) gaps between characters.
+function dilateBinary(bin, w, h, iterations) {
+  let cur = bin;
+  for (let it = 0; it < iterations; it++) {
+    const tmp = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      const rowOff = y * w;
+      for (let x = 0; x < w; x++) {
+        tmp[rowOff + x] = Math.min(
+          cur[rowOff + clamp(x - 1, 0, w - 1)],
+          cur[rowOff + x],
+          cur[rowOff + clamp(x + 1, 0, w - 1)],
+        );
+      }
+    }
+    const out = new Uint8Array(w * h);
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y++) {
+        out[y * w + x] = Math.min(
+          tmp[clamp(y - 1, 0, h - 1) * w + x],
+          tmp[y * w + x],
+          tmp[clamp(y + 1, 0, h - 1) * w + x],
+        );
+      }
+    }
+    cur = out;
+  }
+  return cur;
+}
+
+function buildOcrCanvas(binary, w, h) {
+  const bwCanvas = document.createElement("canvas");
+  bwCanvas.width = w;
+  bwCanvas.height = h;
+  const bctx = bwCanvas.getContext("2d");
+  const imgData = bctx.createImageData(w, h);
+  for (let i = 0, j = 0; i < binary.length; i++, j += 4) {
+    const v = binary[i];
+    imgData.data[j] = v;
+    imgData.data[j + 1] = v;
+    imgData.data[j + 2] = v;
+    imgData.data[j + 3] = 255;
+  }
+  bctx.putImageData(imgData, 0, 0);
+
+  const finalCanvas = document.createElement("canvas");
+  finalCanvas.width = w * PRE_UPSCALE;
+  finalCanvas.height = h * PRE_UPSCALE;
+  const fctx = finalCanvas.getContext("2d");
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(bwCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+  return finalCanvas;
+}
+
+function preprocessVariant(sourceCanvas, { blur, dilate }) {
+  const working = buildWorkingCanvas(sourceCanvas);
+  const w = working.width,
+    h = working.height;
+  const wctx = working.getContext("2d");
+
+  const gray = toGrayscale(wctx, w, h);
+  const blurred = boxBlur(gray, w, h, blur);
+  const threshold = otsuThreshold(blurred);
+  const bin = binarize(blurred, threshold);
+  const dilated = dilateBinary(bin, w, h, dilate);
+
+  return buildOcrCanvas(dilated, w, h);
+}
+
+// ---------------------------------------------------------------
+// Capture + multi-pass recognition
+// ---------------------------------------------------------------
 
 async function captureAndRead() {
   const video = document.getElementById("camera-feed");
@@ -580,22 +845,26 @@ async function captureAndRead() {
 
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  
-  // High contrast & blur filter required to fix the dotted text
-  ctx.filter = "grayscale(100%) contrast(300%) blur(1.5px)";
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   btn.textContent = "⏳ Processing...";
   btn.disabled = true;
 
   try {
-    const { data: { text } } = await ocrWorker.recognize(canvas);
-    const foundNumbers = text.match(/\b\d{5,8}\b/g) || [];
     let matchedCode = null;
+    let lastCandidates = [];
 
-    for (const num of foundNumbers) {
-      if (PRODUCT_CATALOG[num]) {
-        matchedCode = num;
+    for (const variant of PRE_VARIANTS) {
+      const ocrCanvas = preprocessVariant(canvas, variant);
+      const {
+        data: { text },
+      } = await ocrWorker.recognize(ocrCanvas);
+      const foundNumbers = text.match(/\b\d{5,8}\b/g) || [];
+      if (foundNumbers.length) lastCandidates = foundNumbers;
+
+      const hit = foundNumbers.find((num) => PRODUCT_CATALOG[num]);
+      if (hit) {
+        matchedCode = hit;
         break;
       }
     }
@@ -604,7 +873,17 @@ async function captureAndRead() {
       App.openConfirmSheet(matchedCode);
     } else {
       App.triggerFeedback("error");
-      alert("Code not recognized. Ensure the numbers are in focus.");
+      if (lastCandidates.length) {
+        // Read *something* but it didn't match a known code — hand it to
+        // manual entry pre-filled so the user only has to fix a digit or two
+        // instead of retyping the whole thing.
+        document.getElementById("manual-code").value = lastCandidates[0];
+        document.getElementById("manual-modal").classList.add("active");
+      } else {
+        alert(
+          "Code not recognized. Move closer and keep the code flat/in focus.",
+        );
+      }
     }
   } catch (err) {
     console.error("OCR Failed", err);
