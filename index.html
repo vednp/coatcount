@@ -1,106 +1,155 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
-  <title>CoatCount</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-</head>
-<body class="mode-in">
-  <div id="swipe-overlay" class="swipe-effect"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <title>CoatCount</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  </head>
+  <body class="mode-in">
+    <div id="swipe-overlay" class="swipe-effect"></div>
 
-  <header class="app-header">
-    <div class="brand">
-      <div class="brand-logo"></div>
-      <div>
-        <h1 class="brand-title">CoatCount</h1>
-        <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div>
+          <h1 class="brand-title">CoatCount</h1>
+          <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
+        </div>
+      </div>
+      <div id="mode-indicator" class="mode-pill">STOCK IN</div>
+    </header>
+
+    <main id="app-content">
+      <!-- Scanner View -->
+      <section id="scanner-view" class="view-panel active">
+        <div class="qty-selector-container">
+          <span class="qty-label">Batch:</span>
+          <div class="qty-pills" id="qty-pill-group">
+            <button class="qty-pill active" data-qty="1">1x</button>
+            <button class="qty-pill" data-qty="2">2x</button>
+            <button class="qty-pill" data-qty="5">5x</button>
+            <button class="qty-pill" data-qty="10">10x</button>
+            <button class="qty-pill" data-qty="20">20x</button>
+          </div>
+        </div>
+
+        <div class="camera-card">
+          <div id="reader-container">
+            <div class="camera-card">
+              <div id="reader-container">
+                <video
+                  id="camera-feed"
+                  autoplay
+                  playsinline
+                  style="width: 100%; border-radius: 16px; object-fit: cover"
+                ></video>
+                <canvas id="capture-canvas" style="display: none"></canvas>
+                <!-- Add a target overlay to guide the user -->
+                <div
+                  class="scan-target"
+                  style="
+                    position: absolute;
+                    top: 30%;
+                    left: 10%;
+                    right: 10%;
+                    height: 60px;
+                    border: 2px dashed var(--theme-in);
+                    border-radius: 8px;
+                  "
+                ></div>
+              </div>
+              <button
+                id="scan-trigger-btn"
+                class="btn-save"
+                style="width: 100%; margin-top: 10px; padding: 16px"
+              >
+                📸 Tap to Scan Code
+              </button>
+            </div>
+            <div class="scan-laser"></div>
+          </div>
+        </div>
+
+        <div id="last-scanned-card" class="dense-card empty">
+          <div class="empty-placeholder">
+            <div class="pulse-icon">📷</div>
+            <p>Scan a Dulux barcode...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inventory View -->
+      <section id="inventory-view" class="view-panel">
+        <div class="search-bar-wrapper">
+          <input
+            type="search"
+            id="inventory-search"
+            placeholder="Search product or code..."
+          />
+        </div>
+
+        <!-- Card-based list for swipe gestures -->
+        <div id="inventory-list" class="inventory-list"></div>
+
+        <!-- Manual Add Button -->
+        <button class="fab-btn" id="manual-add-btn">+ Add Custom</button>
+      </section>
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-mode="in">
+        <span class="tab-icon">📥</span>
+        <span class="tab-label">Stock In</span>
+      </button>
+      <button class="nav-tab" data-mode="out">
+        <span class="tab-icon">📤</span>
+        <span class="tab-label">Stock Out</span>
+      </button>
+      <button class="nav-tab" data-mode="inventory">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Inventory</span>
+      </button>
+    </nav>
+
+    <!-- Manual Entry Modal -->
+    <div id="manual-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Add Custom Product</h3>
+        <input type="text" id="manual-code" placeholder="Barcode / ID" />
+        <input type="text" id="manual-name" placeholder="Product Name" />
+        <input
+          type="number"
+          id="manual-qty"
+          placeholder="Quantity"
+          value="1"
+          min="1"
+        />
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="App.closeManualModal()">
+            Cancel
+          </button>
+          <button class="btn-save" onclick="App.saveManualItem()">
+            Save Stock
+          </button>
+        </div>
       </div>
     </div>
-    <div id="mode-indicator" class="mode-pill">STOCK IN</div>
-  </header>
 
-  <main id="app-content">
-    <!-- Scanner View -->
-    <section id="scanner-view" class="view-panel active">
-      <div class="qty-selector-container">
-        <span class="qty-label">Batch:</span>
-        <div class="qty-pills" id="qty-pill-group">
-          <button class="qty-pill active" data-qty="1">1x</button>
-          <button class="qty-pill" data-qty="2">2x</button>
-          <button class="qty-pill" data-qty="5">5x</button>
-          <button class="qty-pill" data-qty="10">10x</button>
-          <button class="qty-pill" data-qty="20">20x</button>
-        </div>
-      </div>
-
-      <div class="camera-card">
-        <div id="reader-container">
-          <div id="interactive-reader"></div>
-          <div class="scan-laser"></div>
-        </div>
-      </div>
-
-      <div id="last-scanned-card" class="dense-card empty">
-        <div class="empty-placeholder">
-          <div class="pulse-icon">📷</div>
-          <p>Scan a Dulux barcode...</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Inventory View -->
-    <section id="inventory-view" class="view-panel">
-      <div class="search-bar-wrapper">
-        <input type="search" id="inventory-search" placeholder="Search product or code..." />
-      </div>
-      
-      <!-- Card-based list for swipe gestures -->
-      <div id="inventory-list" class="inventory-list"></div>
-      
-      <!-- Manual Add Button -->
-      <button class="fab-btn" id="manual-add-btn">+ Add Custom</button>
-    </section>
-  </main>
-
-  <!-- Bottom Nav -->
-  <nav class="bottom-nav">
-    <button class="nav-tab active" data-mode="in">
-      <span class="tab-icon">📥</span>
-      <span class="tab-label">Stock In</span>
-    </button>
-    <button class="nav-tab" data-mode="out">
-      <span class="tab-icon">📤</span>
-      <span class="tab-label">Stock Out</span>
-    </button>
-    <button class="nav-tab" data-mode="inventory">
-      <span class="tab-icon">📋</span>
-      <span class="tab-label">Inventory</span>
-    </button>
-  </nav>
-
-  <!-- Manual Entry Modal -->
-  <div id="manual-modal" class="modal-overlay">
-    <div class="modal-content">
-      <h3>Add Custom Product</h3>
-      <input type="text" id="manual-code" placeholder="Barcode / ID" />
-      <input type="text" id="manual-name" placeholder="Product Name" />
-      <input type="number" id="manual-qty" placeholder="Quantity" value="1" min="1" />
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="App.closeManualModal()">Cancel</button>
-        <button class="btn-save" onclick="App.saveManualItem()">Save Stock</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
-    }
-  </script>
-</body>
+    <script src="app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () =>
+          navigator.serviceWorker.register("./sw.js"),
+        );
+      }
+    </script>
+  </body>
 </html>

@@ -564,28 +564,85 @@ const App = {
 };
 
 let html5QrcodeScanner;
-function initCamera() {
-  html5QrcodeScanner = new Html5QrcodeScanner(
-    "interactive-reader",
-    {
-      fps: 15,
-      qrbox: { width: 250, height: 160 },
-      aspectRatio: 1.0,
-      showTorchButtonIfSupported: true,
-    },
-    false,
-  );
-  let lastScan = 0;
-  html5QrcodeScanner.render(
-    (code) => {
-      const now = Date.now();
-      if (now - lastScan < 1200) return;
-      lastScan = now;
-      App.handleScan(code);
-    },
-    () => {},
-  );
+let ocrWorker = null;
+
+async function initOCR() {
+  // 1. Boot up the Tesseract Web Worker
+  ocrWorker = await Tesseract.createWorker("eng");
+
+  // 2. Start the device camera
+  const video = document.getElementById("camera-feed");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", focusMode: "continuous" },
+    });
+    video.srcObject = stream;
+  } catch (err) {
+    console.error("Camera access denied or unavailable.", err);
+  }
+
+  // 3. Bind the capture button
+  document
+    .getElementById("scan-trigger-btn")
+    .addEventListener("click", captureAndRead);
 }
+
+async function captureAndRead() {
+  const video = document.getElementById("camera-feed");
+  const canvas = document.getElementById("capture-canvas");
+  const ctx = canvas.getContext("2d");
+  const btn = document.getElementById("scan-trigger-btn");
+
+  // Set canvas size to match video frame
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  btn.textContent = "⏳ Extracting Text...";
+  btn.disabled = true;
+
+  try {
+    // Run OCR on the captured image
+    const {
+      data: { text },
+    } = await ocrWorker.recognize(canvas);
+    console.log("Raw OCR Output:", text);
+
+    // Use Regex to find 5 to 8 digit numbers in the messy text
+    const foundNumbers = text.match(/\b\d{5,8}\b/g) || [];
+    let matchedCode = null;
+
+    // Check found numbers against our Dulux Catalog
+    for (const num of foundNumbers) {
+      if (PRODUCT_CATALOG[num]) {
+        matchedCode = num;
+        break;
+      }
+    }
+
+    if (matchedCode) {
+      App.handleScan(matchedCode); // Route to existing Add/Sell logic
+    } else {
+      App.triggerFeedback("error");
+      App.renderLastCard(
+        { code: "---", name: "No Catalog Match Found", quantity: 0 },
+        "Check alignment",
+        true,
+      );
+    }
+  } catch (err) {
+    console.error("OCR Failed", err);
+  } finally {
+    btn.textContent = "📸 Tap to Scan Code";
+    btn.disabled = false;
+  }
+}
+
+// Update the boot sequence
+window.addEventListener("DOMContentLoaded", async () => {
+  await App.start();
+  initOCR();
+});
 
 window.addEventListener("DOMContentLoaded", async () => {
   await App.start();
