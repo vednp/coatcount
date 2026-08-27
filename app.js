@@ -1143,7 +1143,7 @@ const OCR_VARIANTS = [
     offset: 8,
     finalDilate: 1,
     adaptive: true,
-  }
+  },
 ];
 
 // ---------------------------------------------------------------

@@ -366,7 +366,7 @@ th { color: var(--text-dim); font-weight: 600; background: #fafafa; text-align: 
 .metric-card span, .metric-card small { display: block; color: var(--text-dim); font-size: .67rem; font-weight: 700; line-height: 1.25; }
 .metric-card strong { display: block; margin: 3px 0; overflow: hidden; text-overflow: ellipsis; color: var(--active-theme); font-size: 1.25rem; letter-spacing: -.03em; }
 #camera-feed { display: block; width: 100%; min-height: 250px; max-height: 48vh; object-fit: cover; background: #111827; }
-.scan-target { position: absolute; inset: 31% 8%; display: grid; place-items: end center; padding-bottom: 8px; border: 2px dashed var(--active-theme); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.14); pointer-events: none; }
+.scan-target { position: absolute; top: 42%; left: 8%; right: 8%; height: 52px; display: grid; place-items: end center; padding-bottom: 5px; border: 2px dashed var(--active-theme); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.14); pointer-events: none; }
 .scan-target span { padding: 4px 8px; border-radius: 8px; background: rgba(17,24,39,.76); color: white; font-size: .7rem; font-weight: 700; }
 .scan-button { display: block; width: calc(100% - 20px); margin: 10px; padding: 14px; font-size: .95rem; cursor: pointer; }
 .scan-button:disabled { cursor: wait; opacity: .68; }
