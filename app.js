@@ -149,11 +149,17 @@ const RAW_CATALOG = [
   { c: "58564 14-18", n: "DN VT Diamond 93 Base" },
   { c: "58564 19-23", n: "DN VT Pearl Glo New Accent 93 Base" },
   { c: "58564 09-13", n: "DN VT Platinum Glo New Accent 93 Base" },
-  { c: "5832299/306/313/320 &", n: "5910851 Dulux SuperClean 3in1 MR White 90 Base" },
+  {
+    c: "5832299/306/313/320 &",
+    n: "5910851 Dulux SuperClean 3in1 MR White 90 Base",
+  },
   { c: "5832327/34/41/48 &", n: "5910851 Dulux SuperClean 3in1 MR 92 Base" },
   { c: "5832355/362/369/472 &", n: "5910852 Dulux SuperClean 3in1 MR 93 Base" },
   { c: "5832479/486/493/500 &", n: "5910853 Dulux SuperClean 3in1 MR 94 Base" },
-  { c: "5906464/65/66/67 &", n: "5906736 Dulux SuperClean New Brilliant White" },
+  {
+    c: "5906464/65/66/67 &",
+    n: "5906736 Dulux SuperClean New Brilliant White",
+  },
   { c: "5906708/09/10/11 &", n: "5906739 Dulux SuperClean New White 90 Base" },
   { c: "5906712/13/14/15 &", n: "5906739 Dulux SuperClean New 92 Base" },
   { c: "5906716/17/18/19 &", n: "5906739 Dulux SuperClean New 93 Base" },
@@ -163,7 +169,10 @@ const RAW_CATALOG = [
   { c: "5906732/33", n: "&5906743 Dulux SuperClean New 97 Base" },
   { c: "5853009/10/11/12/31", n: "Dulux SuperCover Ultra Brilliant White" },
   { c: "5853013/14/15/16/32", n: "Dulux SuperCover Ultra White 90 Base" },
-  { c: "5853017/18/19/20/33", n: "Dulux SuperCover Ultra Intermediate 92 Base" },
+  {
+    c: "5853017/18/19/20/33",
+    n: "Dulux SuperCover Ultra Intermediate 92 Base",
+  },
   { c: "5853021/22/23/24/34", n: "Dulux SuperCover Ultra Accent 94 Base" },
   { c: "5853027/28/36", n: "Dulux SuperCover Ultra Yellow 96 Base" },
   { c: "5853029/30/37", n: "Dulux SuperCover Ultra Red 97 Base" },
@@ -767,9 +776,7 @@ function captureScanRegion(video) {
 
   if (!target) {
     const canvas = createCanvas(video.videoWidth, video.videoHeight);
-    canvas
-      .getContext("2d")
-      .drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
     return canvas;
   }
 
@@ -786,7 +793,7 @@ function captureScanRegion(video) {
 
   // Add margin around the target so dots are never clipped.
   const marginX = sw * 0.18;
-  const marginY = sh * 0.70;
+  const marginY = sh * 0.7;
 
   sx -= marginX;
   sy -= marginY;
@@ -800,10 +807,7 @@ function captureScanRegion(video) {
   sh = clamp(sh, 1, video.videoHeight - sy);
 
   // Upscale immediately.
-  const scale = Math.min(
-    OCR_UPSCALE,
-    OCR_MAX_WIDTH / Math.max(1, sw)
-  );
+  const scale = Math.min(OCR_UPSCALE, OCR_MAX_WIDTH / Math.max(1, sw));
 
   const canvas = createCanvas(sw * scale, sh * scale);
 
@@ -814,17 +818,7 @@ function captureScanRegion(video) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  ctx.drawImage(
-    video,
-    sx,
-    sy,
-    sw,
-    sh,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
   return canvas;
 }
@@ -838,10 +832,7 @@ function toGrayscale(ctx, width, height) {
   const gray = new Float32Array(width * height);
 
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    gray[p] =
-      data[i] * 0.299 +
-      data[i + 1] * 0.587 +
-      data[i + 2] * 0.114;
+    gray[p] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
   }
 
   return gray;
@@ -941,10 +932,7 @@ function darkDilate(gray, width, height, radius) {
         yy <= Math.min(height - 1, y + radius);
         yy++
       ) {
-        minValue = Math.min(
-          minValue,
-          horizontal[yy * width + x]
-        );
+        minValue = Math.min(minValue, horizontal[yy * width + x]);
       }
 
       output[y * width + x] = minValue;
@@ -990,11 +978,9 @@ function otsuThreshold(gray) {
 
     sumBackground += t * hist[t];
 
-    const meanBackground =
-      sumBackground / weightBackground;
+    const meanBackground = sumBackground / weightBackground;
 
-    const meanForeground =
-      (totalSum - sumBackground) / weightForeground;
+    const meanForeground = (totalSum - sumBackground) / weightForeground;
 
     const variance =
       weightBackground *
@@ -1016,21 +1002,12 @@ function otsuThreshold(gray) {
 // More reliable when the paper/label has uneven lighting.
 // ---------------------------------------------------------------
 
-function adaptiveThreshold(
-  gray,
-  width,
-  height,
-  radius,
-  offset
-) {
+function adaptiveThreshold(gray, width, height, radius, offset) {
   const localMean = boxBlur(gray, width, height, radius);
   const result = new Uint8Array(width * height);
 
   for (let i = 0; i < gray.length; i++) {
-    result[i] =
-      gray[i] < localMean[i] - offset
-        ? 0
-        : 255;
+    result[i] = gray[i] < localMean[i] - offset ? 0 : 255;
   }
 
   return result;
@@ -1066,10 +1043,7 @@ function binaryToCanvas(binary, width, height) {
 // Preprocessing variant
 // ---------------------------------------------------------------
 
-function preprocessDottedImage(
-  sourceCanvas,
-  options
-) {
+function preprocessDottedImage(sourceCanvas, options) {
   const width = sourceCanvas.width;
   const height = sourceCanvas.height;
 
@@ -1080,12 +1054,7 @@ function preprocessDottedImage(
   const gray = toGrayscale(ctx, width, height);
 
   // First enlarge/darken dots.
-  const merged = darkDilate(
-    gray,
-    width,
-    height,
-    options.dotRadius
-  );
+  const merged = darkDilate(gray, width, height, options.dotRadius);
 
   let binary;
 
@@ -1095,23 +1064,17 @@ function preprocessDottedImage(
       width,
       height,
       options.blurRadius,
-      options.offset
+      options.offset,
     );
   } else {
-    const blurred = boxBlur(
-      merged,
-      width,
-      height,
-      options.blurRadius
-    );
+    const blurred = boxBlur(merged, width, height, options.blurRadius);
 
     const threshold = otsuThreshold(blurred);
 
     binary = new Uint8Array(width * height);
 
     for (let i = 0; i < blurred.length; i++) {
-      binary[i] =
-        blurred[i] < threshold ? 0 : 255;
+      binary[i] = blurred[i] < threshold ? 0 : 255;
     }
   }
 
@@ -1124,12 +1087,7 @@ function preprocessDottedImage(
       temp[i] = binary[i];
     }
 
-    const mergedBinary = darkDilate(
-      temp,
-      width,
-      height,
-      options.finalDilate
-    );
+    const mergedBinary = darkDilate(temp, width, height, options.finalDilate);
 
     for (let i = 0; i < mergedBinary.length; i++) {
       binary[i] = mergedBinary[i] < 128 ? 0 : 255;
@@ -1147,45 +1105,13 @@ function preprocessDottedImage(
 
 const OCR_VARIANTS = [
   {
-    name: "adaptive-strong",
+    name: "dotted-optimized",
     dotRadius: 2,
-    blurRadius: 4,
-    offset: 12,
-    finalDilate: 2,
-    adaptive: true,
-  },
-  {
-    name: "otsu-strong",
-    dotRadius: 3,
-    blurRadius: 3,
-    offset: 0,
-    finalDilate: 2,
-    adaptive: false,
-  },
-  {
-    name: "adaptive-medium",
-    dotRadius: 2,
-    blurRadius: 3,
-    offset: 10,
+    blurRadius: 2,
+    offset: 15,
     finalDilate: 1,
     adaptive: true,
   },
-  {
-    name: "otsu-medium",
-    dotRadius: 2,
-    blurRadius: 2,
-    offset: 0,
-    finalDilate: 2,
-    adaptive: false,
-  },
-  {
-    name: "adaptive-light",
-    dotRadius: 1,
-    blurRadius: 2,
-    offset: 8,
-    finalDilate: 1,
-    adaptive: true,
-  }
 ];
 
 // ---------------------------------------------------------------
@@ -1228,7 +1154,7 @@ function levenshtein(a, b) {
       dp[i][j] = Math.min(
         dp[i - 1][j] + 1,
         dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
+        dp[i - 1][j - 1] + cost,
       );
     }
   }
@@ -1261,8 +1187,8 @@ function matchCatalogCode(rawText) {
 
   if (!digits) return null;
 
-  const catalogCodes = Object.keys(PRODUCT_CATALOG).filter(
-    (code) => /^\d+$/.test(code)
+  const catalogCodes = Object.keys(PRODUCT_CATALOG).filter((code) =>
+    /^\d+$/.test(code),
   );
 
   // ------------------------------------------------------------
@@ -1281,8 +1207,7 @@ function matchCatalogCode(rawText) {
 
   const candidates = new Set();
 
-  const tokenMatches =
-    String(rawText).match(/\d{4,10}/g) || [];
+  const tokenMatches = String(rawText).match(/\d{4,10}/g) || [];
 
   tokenMatches.forEach((token) => {
     candidates.add(token);
@@ -1317,8 +1242,7 @@ function matchCatalogCode(rawText) {
       }
 
       if (distance <= allowed) {
-        const lengthPenalty =
-          Math.abs(candidate.length - code.length) * 0.5;
+        const lengthPenalty = Math.abs(candidate.length - code.length) * 0.5;
 
         const score = distance + lengthPenalty;
 
@@ -1342,14 +1266,11 @@ function matchCatalogCode(rawText) {
 // ---------------------------------------------------------------
 
 async function recognizeCanvas(canvas) {
-  // Ordered 13, 8, 7. PSM 13 (raw line) and 8 (single word) are generally much better for dotted numeric matrices than 7.
-  const psmModes = ["13", "8", "7"];
+  const psmModes = ["7"];
 
   let bestText = "";
 
   for (const psm of psmModes) {
-    // Only set page seg mode inside the loop to avoid heavy reset overhead if possible,
-    // but Tesseract.js setParameters is usually fine as long as it doesn't trigger language reload.
     await ocrWorker.setParameters({
       tessedit_pageseg_mode: psm,
       tessedit_char_whitelist: "0123456789",
@@ -1408,12 +1329,7 @@ async function legacyCaptureAndRead() {
     // Crop to the scan target rather than OCR the entire frame.
     const scanCanvas = captureScanRegion(video);
 
-    console.log(
-      "OCR image:",
-      scanCanvas.width,
-      "x",
-      scanCanvas.height
-    );
+    console.log("OCR image:", scanCanvas.width, "x", scanCanvas.height);
 
     let matchedCode = null;
     let lastText = "";
@@ -1423,10 +1339,7 @@ async function legacyCaptureAndRead() {
     for (const variant of OCR_VARIANTS) {
       console.log("Trying OCR variant:", variant.name);
 
-      const processed = preprocessDottedImage(
-        scanCanvas,
-        variant
-      );
+      const processed = preprocessDottedImage(scanCanvas, variant);
 
       const result = await recognizeCanvas(processed);
 
@@ -1435,8 +1348,7 @@ async function legacyCaptureAndRead() {
       if (text) {
         lastText = text;
 
-        const candidates =
-          text.match(/\d{4,10}/g) || [];
+        const candidates = text.match(/\d{4,10}/g) || [];
 
         if (candidates.length) {
           lastCandidates = candidates;
@@ -1447,17 +1359,14 @@ async function legacyCaptureAndRead() {
           "OCR:",
           JSON.stringify(text),
           "match:",
-          result.matched
+          result.matched,
         );
       }
 
       if (result.matched) {
         matchedCode = result.matched;
 
-        console.log(
-          "MATCHED CATALOG CODE:",
-          matchedCode
-        );
+        console.log("MATCHED CATALOG CODE:", matchedCode);
 
         break;
       }
@@ -1483,21 +1392,18 @@ async function legacyCaptureAndRead() {
       "Last text:",
       lastText,
       "Candidates:",
-      lastCandidates
+      lastCandidates,
     );
 
     if (lastCandidates.length) {
-      document.getElementById("manual-code").value =
-        lastCandidates[0];
+      document.getElementById("manual-code").value = lastCandidates[0];
 
-      document
-        .getElementById("manual-modal")
-        .classList.add("active");
+      document.getElementById("manual-modal").classList.add("active");
     } else {
       alert(
         "Code not recognized.\n\n" +
-        "Place the dotted code inside the dashed box, " +
-        "move slightly closer, and tap Scan again."
+          "Place the dotted code inside the dashed box, " +
+          "move slightly closer, and tap Scan again.",
       );
     }
   } catch (err) {
@@ -1505,9 +1411,7 @@ async function legacyCaptureAndRead() {
 
     App.triggerFeedback("error");
 
-    alert(
-      "OCR error. Please refresh the page and try again."
-    );
+    alert("OCR error. Please refresh the page and try again.");
   } finally {
     btn.disabled = false;
     btn.textContent = "📸 Tap to Scan Code";
@@ -1537,21 +1441,32 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 // CoatCount application - fast barcode-first scanning with a dot-matrix fallback.
 class CoatCountStore {
-  constructor() { this.db = null; }
+  constructor() {
+    this.db = null;
+  }
   async init() {
     this.db = await new Promise((resolve, reject) => {
       const request = indexedDB.open("CoatCountDB", 2);
       request.onupgradeneeded = () => {
         const db = request.result;
-        if (!db.objectStoreNames.contains("inventory")) db.createObjectStore("inventory", { keyPath: "id" });
-        if (!db.objectStoreNames.contains("activity")) db.createObjectStore("activity", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("inventory"))
+          db.createObjectStore("inventory", { keyPath: "id" });
+        if (!db.objectStoreNames.contains("activity"))
+          db.createObjectStore("activity", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
     // Older installs used `code` as the storage key. Keep their stock intact.
     const legacy = await this.all();
-    await Promise.all(legacy.filter(item => !item.id).map(item => this.put({ ...item, id: item.code })));
+    await Promise.all(
+      legacy
+        .filter((item) => !item.id)
+        .map((item) => this.put({ ...item, id: item.code })),
+    );
   }
   request(store, mode, action) {
     return new Promise((resolve, reject) => {
@@ -1561,20 +1476,38 @@ class CoatCountStore {
       req.onerror = () => reject(req.error);
     });
   }
-  get(id) { return this.request("inventory", "readonly", s => s.get(id)); }
-  all() { return this.request("inventory", "readonly", s => s.getAll()); }
-  put(item) { return this.request("inventory", "readwrite", s => s.put(item)); }
-  remove(id) { return this.request("inventory", "readwrite", s => s.delete(id)); }
-  log(entry) { return this.request("activity", "readwrite", s => s.add(entry)); }
+  get(id) {
+    return this.request("inventory", "readonly", (s) => s.get(id));
+  }
+  all() {
+    return this.request("inventory", "readonly", (s) => s.getAll());
+  }
+  put(item) {
+    return this.request("inventory", "readwrite", (s) => s.put(item));
+  }
+  remove(id) {
+    return this.request("inventory", "readwrite", (s) => s.delete(id));
+  }
+  log(entry) {
+    return this.request("activity", "readwrite", (s) => s.add(entry));
+  }
   async todayCount() {
-    const entries = await this.request("activity", "readonly", s => s.getAll());
+    const entries = await this.request("activity", "readonly", (s) =>
+      s.getAll(),
+    );
     const today = new Date().toDateString();
-    return entries.filter(e => new Date(e.at).toDateString() === today).length;
+    return entries.filter((e) => new Date(e.at).toDateString() === today)
+      .length;
   }
 }
 
 const App = {
-  store: new CoatCountStore(), mode: "in", pending: null, size: "1L", qty: 1, busy: false,
+  store: new CoatCountStore(),
+  mode: "in",
+  pending: null,
+  size: "1L",
+  qty: 1,
+  busy: false,
   async start() {
     await this.store.init();
     this.bindEvents();
@@ -1582,152 +1515,517 @@ const App = {
     initCamera();
   },
   bindEvents() {
-    document.querySelectorAll(".nav-tab").forEach(button => button.addEventListener("click", () => this.setMode(button.dataset.mode)));
-    document.querySelectorAll("#qty-pill-group .qty-pill").forEach(button => button.addEventListener("click", () => {
-      document.querySelectorAll("#qty-pill-group .qty-pill").forEach(p => p.classList.toggle("active", p === button));
-      this.qty = Number(button.dataset.qty);
-    }));
-    document.querySelectorAll(".size-pill").forEach(button => button.addEventListener("click", () => { this.size = button.dataset.size; this.updatePills(); }));
-    document.querySelectorAll("#pack-qty-pills .qty-pill").forEach(button => button.addEventListener("click", () => {
-      if (button.dataset.qty === "custom") {
-        const value = Number(prompt("Quantity", String(this.qty)));
-        if (Number.isFinite(value) && value > 0) this.qty = Math.floor(value);
-      } else this.qty = Number(button.dataset.qty);
-      this.updatePills();
-    }));
-    document.getElementById("inventory-search").addEventListener("input", e => this.renderInventory(e.target.value));
-    document.getElementById("manual-add-btn").addEventListener("click", () => this.openManual());
-    document.getElementById("manual-cancel-btn").addEventListener("click", () => this.closeManual());
-    document.getElementById("manual-save-btn").addEventListener("click", () => this.saveManual());
-    document.getElementById("confirm-cancel-btn").addEventListener("click", () => this.closeConfirm());
-    document.getElementById("scan-trigger-btn").addEventListener("click", captureAndRead);
-    const installButton = document.getElementById("install-app-btn"), installSheet = document.getElementById("install-sheet");
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-    if (isIOS && !isStandalone) { installButton.hidden = false; installButton.addEventListener("click", () => installSheet.classList.add("active")); }
-    document.getElementById("install-sheet-close").addEventListener("click", () => installSheet.classList.remove("active"));
+    document
+      .querySelectorAll(".nav-tab")
+      .forEach((button) =>
+        button.addEventListener("click", () =>
+          this.setMode(button.dataset.mode),
+        ),
+      );
+    document.querySelectorAll("#qty-pill-group .qty-pill").forEach((button) =>
+      button.addEventListener("click", () => {
+        document
+          .querySelectorAll("#qty-pill-group .qty-pill")
+          .forEach((p) => p.classList.toggle("active", p === button));
+        this.qty = Number(button.dataset.qty);
+      }),
+    );
+    document.querySelectorAll(".size-pill").forEach((button) =>
+      button.addEventListener("click", () => {
+        this.size = button.dataset.size;
+        this.updatePills();
+      }),
+    );
+    document.querySelectorAll("#pack-qty-pills .qty-pill").forEach((button) =>
+      button.addEventListener("click", () => {
+        if (button.dataset.qty === "custom") {
+          const value = Number(prompt("Quantity", String(this.qty)));
+          if (Number.isFinite(value) && value > 0) this.qty = Math.floor(value);
+        } else this.qty = Number(button.dataset.qty);
+        this.updatePills();
+      }),
+    );
+    document
+      .getElementById("inventory-search")
+      .addEventListener("input", (e) => this.renderInventory(e.target.value));
+    document
+      .getElementById("manual-add-btn")
+      .addEventListener("click", () => this.openManual());
+    document
+      .getElementById("manual-cancel-btn")
+      .addEventListener("click", () => this.closeManual());
+    document
+      .getElementById("manual-save-btn")
+      .addEventListener("click", () => this.saveManual());
+    document
+      .getElementById("confirm-cancel-btn")
+      .addEventListener("click", () => this.closeConfirm());
+    document
+      .getElementById("scan-trigger-btn")
+      .addEventListener("click", captureAndRead);
+    const installButton = document.getElementById("install-app-btn"),
+      installSheet = document.getElementById("install-sheet");
+    const isIOS =
+      /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      navigator.standalone;
+    if (isIOS && !isStandalone) {
+      installButton.hidden = false;
+      installButton.addEventListener("click", () =>
+        installSheet.classList.add("active"),
+      );
+    }
+    document
+      .getElementById("install-sheet-close")
+      .addEventListener("click", () => installSheet.classList.remove("active"));
     this.bindConfirmSlider();
   },
   bindConfirmSlider() {
-    const track = document.getElementById("swipe-track"), thumb = document.getElementById("swipe-thumb"), text = document.getElementById("swipe-text");
-    let start = 0, offset = 0, active = false;
-    const move = x => { const max = track.clientWidth - thumb.clientWidth - 8; offset = Math.max(0, Math.min(max, x - start)); thumb.style.transform = `translateX(${offset}px)`; text.style.opacity = String(1 - offset / max); };
-    thumb.addEventListener("pointerdown", e => { active = true; start = e.clientX; thumb.setPointerCapture(e.pointerId); thumb.style.transition = "none"; });
-    thumb.addEventListener("pointermove", e => { if (active) move(e.clientX); });
-    thumb.addEventListener("pointerup", () => { if (!active) return; active = false; const max = track.clientWidth - thumb.clientWidth - 8; thumb.style.transition = "transform .2s ease"; if (offset > max * .82) { thumb.style.transform = `translateX(${max}px)`; setTimeout(() => this.commit(), 120); } else { thumb.style.transform = "translateX(0)"; text.style.opacity = "1"; } });
+    const track = document.getElementById("swipe-track"),
+      thumb = document.getElementById("swipe-thumb"),
+      text = document.getElementById("swipe-text");
+    let start = 0,
+      offset = 0,
+      active = false;
+    const move = (x) => {
+      const max = track.clientWidth - thumb.clientWidth - 8;
+      offset = Math.max(0, Math.min(max, x - start));
+      thumb.style.transform = `translateX(${offset}px)`;
+      text.style.opacity = String(1 - offset / max);
+    };
+    thumb.addEventListener("pointerdown", (e) => {
+      active = true;
+      start = e.clientX;
+      thumb.setPointerCapture(e.pointerId);
+      thumb.style.transition = "none";
+    });
+    thumb.addEventListener("pointermove", (e) => {
+      if (active) move(e.clientX);
+    });
+    thumb.addEventListener("pointerup", () => {
+      if (!active) return;
+      active = false;
+      const max = track.clientWidth - thumb.clientWidth - 8;
+      thumb.style.transition = "transform .2s ease";
+      if (offset > max * 0.82) {
+        thumb.style.transform = `translateX(${max}px)`;
+        setTimeout(() => this.commit(), 120);
+      } else {
+        thumb.style.transform = "translateX(0)";
+        text.style.opacity = "1";
+      }
+    });
   },
   setMode(mode) {
     this.mode = mode;
     document.body.className = `mode-${mode}`;
-    document.querySelectorAll(".nav-tab").forEach(t => t.classList.toggle("active", t.dataset.mode === mode));
-    document.getElementById("mode-indicator").textContent = mode === "in" ? "STOCK IN" : mode === "out" ? "STOCK OUT" : "INVENTORY";
-    document.getElementById("scanner-view").classList.toggle("active", mode !== "inventory");
-    document.getElementById("inventory-view").classList.toggle("active", mode === "inventory");
+    document
+      .querySelectorAll(".nav-tab")
+      .forEach((t) => t.classList.toggle("active", t.dataset.mode === mode));
+    document.getElementById("mode-indicator").textContent =
+      mode === "in" ? "STOCK IN" : mode === "out" ? "STOCK OUT" : "INVENTORY";
+    document
+      .getElementById("scanner-view")
+      .classList.toggle("active", mode !== "inventory");
+    document
+      .getElementById("inventory-view")
+      .classList.toggle("active", mode === "inventory");
     if (mode === "inventory") this.renderInventory();
   },
   updatePills() {
-    document.querySelectorAll(".size-pill").forEach(p => p.classList.toggle("active", p.dataset.size === this.size));
-    document.querySelectorAll("#pack-qty-pills .qty-pill").forEach(p => p.classList.toggle("active", p.dataset.qty === String(this.qty) || (p.dataset.qty === "custom" && ![1,2,5,10].includes(this.qty))));
+    document
+      .querySelectorAll(".size-pill")
+      .forEach((p) =>
+        p.classList.toggle("active", p.dataset.size === this.size),
+      );
+    document
+      .querySelectorAll("#pack-qty-pills .qty-pill")
+      .forEach((p) =>
+        p.classList.toggle(
+          "active",
+          p.dataset.qty === String(this.qty) ||
+            (p.dataset.qty === "custom" && ![1, 2, 5, 10].includes(this.qty)),
+        ),
+      );
   },
   async refresh() {
-    const items = await this.store.all(), units = items.reduce((n, item) => n + item.quantity, 0), today = await this.store.todayCount();
-    document.getElementById("stat-summary").textContent = `${items.length} SKUs • ${units} Units`;
+    const items = await this.store.all(),
+      units = items.reduce((n, item) => n + item.quantity, 0),
+      today = await this.store.todayCount();
+    document.getElementById("stat-summary").textContent =
+      `${items.length} SKUs • ${units} Units`;
     document.getElementById("metric-units").textContent = units;
     document.getElementById("metric-skus").textContent = items.length;
     document.getElementById("metric-today").textContent = today;
   },
   openProduct(code) {
-    const clean = normalizeCode(code), product = PRODUCT_CATALOG[clean];
-    if (!product) { this.openManual(clean); return; }
+    const clean = normalizeCode(code),
+      product = PRODUCT_CATALOG[clean];
+    if (!product) {
+      this.openManual(clean);
+      return;
+    }
     this.pending = { code: clean, name: product.name };
-    this.size = "1L"; this.qty = this.qty || 1; this.updatePills();
+    this.size = "1L";
+    this.qty = this.qty || 1;
+    this.updatePills();
     document.getElementById("confirm-name").textContent = product.name;
     document.getElementById("confirm-code").textContent = `Code: ${clean}`;
-    document.getElementById("confirm-mode-text").textContent = this.mode === "out" ? "Sell" : "Add";
-    document.getElementById("swipe-text").textContent = this.mode === "out" ? "Swipe to sell  ››" : "Swipe to add stock  ››";
+    document.getElementById("confirm-mode-text").textContent =
+      this.mode === "out" ? "Sell" : "Add";
+    document.getElementById("swipe-text").textContent =
+      this.mode === "out" ? "Swipe to sell  ››" : "Swipe to add stock  ››";
     document.getElementById("swipe-thumb").style.transform = "translateX(0)";
     document.getElementById("confirm-sheet").classList.add("active");
   },
-  closeConfirm() { document.getElementById("confirm-sheet").classList.remove("active"); this.pending = null; },
-  openManual(code = "") { document.getElementById("manual-code").value = code; document.getElementById("manual-name").value = ""; document.getElementById("manual-qty").value = this.qty; document.getElementById("manual-modal").classList.add("active"); },
-  closeManual() { document.getElementById("manual-modal").classList.remove("active"); },
+  closeConfirm() {
+    document.getElementById("confirm-sheet").classList.remove("active");
+    this.pending = null;
+  },
+  openManual(code = "") {
+    document.getElementById("manual-code").value = code;
+    document.getElementById("manual-name").value = "";
+    document.getElementById("manual-qty").value = this.qty;
+    document.getElementById("manual-modal").classList.add("active");
+  },
+  closeManual() {
+    document.getElementById("manual-modal").classList.remove("active");
+  },
   async saveManual() {
-    const code = normalizeCode(document.getElementById("manual-code").value), name = document.getElementById("manual-name").value.trim(), quantity = Math.floor(Number(document.getElementById("manual-qty").value));
-    if (!code || !name || !quantity) return alert("Enter a code, product name, and quantity.");
-    PRODUCT_CATALOG[code] = { name }; this.pending = { code, name }; this.size = "1L"; this.qty = quantity; this.closeManual(); await this.commit("in");
+    const code = normalizeCode(document.getElementById("manual-code").value),
+      name = document.getElementById("manual-name").value.trim(),
+      quantity = Math.floor(
+        Number(document.getElementById("manual-qty").value),
+      );
+    if (!code || !name || !quantity)
+      return alert("Enter a code, product name, and quantity.");
+    PRODUCT_CATALOG[code] = { name };
+    this.pending = { code, name };
+    this.size = "1L";
+    this.qty = quantity;
+    this.closeManual();
+    await this.commit("in");
   },
   async commit(forceMode) {
-    if (!this.pending || this.busy) return; this.busy = true;
-    const mode = forceMode || this.mode, id = `${this.pending.code}::${this.size}`, item = await this.store.get(id), existing = item?.quantity || 0;
-    if (mode === "out" && !item) { this.feedback("error"); this.busy = false; return alert("This product and pack size are not currently in stock."); }
+    if (!this.pending || this.busy) return;
+    this.busy = true;
+    const mode = forceMode || this.mode,
+      id = `${this.pending.code}::${this.size}`,
+      item = await this.store.get(id),
+      existing = item?.quantity || 0;
+    if (mode === "out" && !item) {
+      this.feedback("error");
+      this.busy = false;
+      return alert("This product and pack size are not currently in stock.");
+    }
     const next = mode === "in" ? existing + this.qty : existing - this.qty;
-    if (next <= 0) { if (item) await this.store.remove(id); } else await this.store.put({ id, code: id, rawCode: this.pending.code, name: this.pending.name, packSize: this.size, quantity: next, updatedAt: new Date().toISOString() });
-    await this.store.log({ at: new Date().toISOString(), mode, code: this.pending.code, quantity: this.qty });
-    this.lastScan(this.pending, mode, next > 0 ? next : 0); this.closeConfirm(); this.feedback(mode); await this.refresh(); if (this.mode === "inventory") this.renderInventory(); this.busy = false;
+    if (next <= 0) {
+      if (item) await this.store.remove(id);
+    } else
+      await this.store.put({
+        id,
+        code: id,
+        rawCode: this.pending.code,
+        name: this.pending.name,
+        packSize: this.size,
+        quantity: next,
+        updatedAt: new Date().toISOString(),
+      });
+    await this.store.log({
+      at: new Date().toISOString(),
+      mode,
+      code: this.pending.code,
+      quantity: this.qty,
+    });
+    this.lastScan(this.pending, mode, next > 0 ? next : 0);
+    this.closeConfirm();
+    this.feedback(mode);
+    await this.refresh();
+    if (this.mode === "inventory") this.renderInventory();
+    this.busy = false;
   },
-  feedback(mode) { if (navigator.vibrate) navigator.vibrate(mode === "error" ? [40, 50, 40] : 30); const overlay = document.getElementById("swipe-overlay"); overlay.className = `swipe-effect active swipe-${mode}`; setTimeout(() => overlay.className = "swipe-effect", 700); },
-  lastScan(product, mode, stock) { const card = document.getElementById("last-scanned-card"); card.className = "dense-card"; card.innerHTML = `<div class="card-top"><span class="card-code">${escapeHtml(product.code)}</span><span class="card-units">${stock} left</span></div><div class="card-name">${escapeHtml(product.name)}</div><div class="card-action-bar"><span class="card-badge-status">${mode === "in" ? "STOCK ADDED" : "SOLD"}</span><span>${this.qty} × ${this.size}</span></div>`; },
+  feedback(mode) {
+    if (navigator.vibrate)
+      navigator.vibrate(mode === "error" ? [40, 50, 40] : 30);
+    const overlay = document.getElementById("swipe-overlay");
+    overlay.className = `swipe-effect active swipe-${mode}`;
+    setTimeout(() => (overlay.className = "swipe-effect"), 700);
+  },
+  lastScan(product, mode, stock) {
+    const card = document.getElementById("last-scanned-card");
+    card.className = "dense-card";
+    card.innerHTML = `<div class="card-top"><span class="card-code">${escapeHtml(product.code)}</span><span class="card-units">${stock} left</span></div><div class="card-name">${escapeHtml(product.name)}</div><div class="card-action-bar"><span class="card-badge-status">${mode === "in" ? "STOCK ADDED" : "SOLD"}</span><span>${this.qty} × ${this.size}</span></div>`;
+  },
   async renderInventory(query = "") {
-    const q = query.toLowerCase().trim(), items = (await this.store.all()).filter(i => !q || i.name.toLowerCase().includes(q) || i.rawCode.toLowerCase().includes(q)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)), list = document.getElementById("inventory-list");
-    list.replaceChildren(); if (!items.length) { list.innerHTML = '<p class="empty-list">No matching stock.</p>'; return; }
-    items.forEach(item => { const el = document.createElement("article"); el.className = "inventory-card"; el.innerHTML = `<div class="inv-details"><span class="inv-name">${escapeHtml(item.name)} <em>${escapeHtml(item.packSize)}</em></span><span class="inv-code">${escapeHtml(item.rawCode)}</span></div><div class="inventory-actions"><button aria-label="Sell one" data-step="-1">−</button><strong>${item.quantity}</strong><button aria-label="Add one" data-step="1">+</button></div>`; el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => this.adjust(item.id, Number(b.dataset.step)))); list.append(el); });
+    const q = query.toLowerCase().trim(),
+      items = (await this.store.all())
+        .filter(
+          (i) =>
+            !q ||
+            i.name.toLowerCase().includes(q) ||
+            i.rawCode.toLowerCase().includes(q),
+        )
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+      list = document.getElementById("inventory-list");
+    list.replaceChildren();
+    if (!items.length) {
+      list.innerHTML = '<p class="empty-list">No matching stock.</p>';
+      return;
+    }
+    items.forEach((item) => {
+      const el = document.createElement("article");
+      el.className = "inventory-card";
+      el.innerHTML = `<div class="inv-details"><span class="inv-name">${escapeHtml(item.name)} <em>${escapeHtml(item.packSize)}</em></span><span class="inv-code">${escapeHtml(item.rawCode)}</span></div><div class="inventory-actions"><button aria-label="Sell one" data-step="-1">−</button><strong>${item.quantity}</strong><button aria-label="Add one" data-step="1">+</button></div>`;
+      el.querySelectorAll("button").forEach((b) =>
+        b.addEventListener("click", () =>
+          this.adjust(item.id, Number(b.dataset.step)),
+        ),
+      );
+      list.append(el);
+    });
   },
-  async adjust(id, step) { const item = await this.store.get(id); if (!item) return; item.quantity += step; if (item.quantity <= 0) await this.store.remove(id); else { item.updatedAt = new Date().toISOString(); await this.store.put(item); } await this.store.log({at:new Date().toISOString(),mode:step > 0 ? "in":"out",code:item.rawCode,quantity:1}); this.feedback(step > 0 ? "in" : "out"); await this.refresh(); this.renderInventory(document.getElementById("inventory-search").value); }
+  async adjust(id, step) {
+    const item = await this.store.get(id);
+    if (!item) return;
+    item.quantity += step;
+    if (item.quantity <= 0) await this.store.remove(id);
+    else {
+      item.updatedAt = new Date().toISOString();
+      await this.store.put(item);
+    }
+    await this.store.log({
+      at: new Date().toISOString(),
+      mode: step > 0 ? "in" : "out",
+      code: item.rawCode,
+      quantity: 1,
+    });
+    this.feedback(step > 0 ? "in" : "out");
+    await this.refresh();
+    this.renderInventory(document.getElementById("inventory-search").value);
+  },
 };
 
-function normalizeCode(value) { return String(value || "").toUpperCase().replace(/O/g, "0").replace(/L/g, "1").replace(/[^A-Z0-9]/g, ""); }
-function escapeHtml(value) { const span = document.createElement("span"); span.textContent = String(value); return span.innerHTML; }
+function normalizeCode(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/O/g, "0")
+    .replace(/L/g, "1")
+    .replace(/[^A-Z0-9]/g, "");
+}
+function escapeHtml(value) {
+  const span = document.createElement("span");
+  span.textContent = String(value);
+  return span.innerHTML;
+}
 
 let cameraStream;
 async function initCamera() {
-  const video = document.getElementById("camera-feed"), status = document.getElementById("camera-status");
-  try { cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); video.srcObject = cameraStream; await video.play(); status.textContent = "Ready - keep the code inside the guide."; }
-  catch { status.textContent = "Camera unavailable. You can still add products manually."; }
+  const video = document.getElementById("camera-feed");
+  const status = document.getElementById("camera-status");
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false,
+    });
+    video.srcObject = cameraStream;
+    await new Promise((resolve) => {
+      if (video.readyState >= 2) resolve();
+      else video.addEventListener("loadedmetadata", resolve, { once: true });
+    });
+    status.textContent = "Ready - keep the code inside the guide.";
+  } catch (error) {
+    console.error("Camera denied:", error);
+    status.textContent =
+      "Camera unavailable. You can still add products manually.";
+    alert("Camera permission is required.");
+  }
 }
 async function barcodeFromVideo(video) {
   if (!("BarcodeDetector" in window)) return null;
-  const detector = new BarcodeDetector({ formats: ["code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "itf"] });
-  const results = await detector.detect(video); return results[0]?.rawValue || null;
+  const detector = new BarcodeDetector({
+    formats: [
+      "code_128",
+      "code_39",
+      "ean_13",
+      "ean_8",
+      "upc_a",
+      "upc_e",
+      "itf",
+    ],
+  });
+  const results = await detector.detect(video);
+  return results[0]?.rawValue || null;
 }
 function captureCrop(video) {
-  const target = document.querySelector(".scan-target").getBoundingClientRect(), rect = video.getBoundingClientRect(), scaleX = video.videoWidth / rect.width, scaleY = video.videoHeight / rect.height;
-  const marginX = target.width * .12, marginY = target.height * .65, sx = Math.max(0, (target.left - rect.left - marginX) * scaleX), sy = Math.max(0, (target.top - rect.top - marginY) * scaleY), sw = Math.min(video.videoWidth - sx, (target.width + marginX * 2) * scaleX), sh = Math.min(video.videoHeight - sy, (target.height + marginY * 2) * scaleY);
-  const canvas = document.createElement("canvas"); canvas.width = Math.min(1600, Math.round(sw * 2)); canvas.height = Math.round(sh * (canvas.width / sw)); const ctx = canvas.getContext("2d", {willReadFrequently:true}); ctx.imageSmoothingEnabled = false; ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height); return canvas;
+  const target = document.querySelector(".scan-target").getBoundingClientRect(),
+    rect = video.getBoundingClientRect(),
+    scaleX = video.videoWidth / rect.width,
+    scaleY = video.videoHeight / rect.height;
+  const marginX = target.width * 0.12,
+    marginY = target.height * 0.65,
+    sx = Math.max(0, (target.left - rect.left - marginX) * scaleX),
+    sy = Math.max(0, (target.top - rect.top - marginY) * scaleY),
+    sw = Math.min(video.videoWidth - sx, (target.width + marginX * 2) * scaleX),
+    sh = Math.min(
+      video.videoHeight - sy,
+      (target.height + marginY * 2) * scaleY,
+    );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.min(1600, Math.round(sw * 2));
+  canvas.height = Math.round(sh * (canvas.width / sw));
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
 }
 function preprocessDotMatrix(canvas) {
-  const ctx = canvas.getContext("2d", {willReadFrequently:true}), image = ctx.getImageData(0,0,canvas.width,canvas.height), data = image.data;
-  let sum = 0; for (let i=0;i<data.length;i+=4) sum += data[i]*.299 + data[i+1]*.587 + data[i+2]*.114; const threshold = Math.max(85, Math.min(210, sum / (data.length/4) - 28));
-  for (let i=0;i<data.length;i+=4) { const gray = data[i]*.299 + data[i+1]*.587 + data[i+2]*.114; const pixel = gray < threshold ? 0 : 255; data[i]=data[i+1]=data[i+2]=pixel; data[i+3]=255; }
+  const ctx = canvas.getContext("2d", { willReadFrequently: true }),
+    image = ctx.getImageData(0, 0, canvas.width, canvas.height),
+    data = image.data;
+  let sum = 0;
+  for (let i = 0; i < data.length; i += 4)
+    sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+  const threshold = Math.max(85, Math.min(210, sum / (data.length / 4) - 28));
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const pixel = gray < threshold ? 0 : 255;
+    data[i] = data[i + 1] = data[i + 2] = pixel;
+    data[i + 3] = 255;
+  }
   // A one-pixel dilation joins the tiny dots in matrix printing without joining adjacent digits.
   const source = new Uint8ClampedArray(data);
-  for (let y=1;y<canvas.height-1;y++) for (let x=1;x<canvas.width-1;x++) { const at = (y*canvas.width+x)*4; if (source[at] === 0 || source[at-4] === 0 || source[at+4] === 0 || source[at-canvas.width*4] === 0 || source[at+canvas.width*4] === 0) data[at]=data[at+1]=data[at+2]=0; }
-  ctx.putImageData(image,0,0); return canvas;
+  for (let y = 1; y < canvas.height - 1; y++)
+    for (let x = 1; x < canvas.width - 1; x++) {
+      const at = (y * canvas.width + x) * 4;
+      if (
+        source[at] === 0 ||
+        source[at - 4] === 0 ||
+        source[at + 4] === 0 ||
+        source[at - canvas.width * 4] === 0 ||
+        source[at + canvas.width * 4] === 0
+      )
+        data[at] = data[at + 1] = data[at + 2] = 0;
+    }
+  ctx.putImageData(image, 0, 0);
+  return canvas;
 }
 async function dottedCodeFromVideo(video) {
   if (!window.Tesseract) return null;
-  if (!ocrWorker) { ocrWorker = await Tesseract.createWorker("eng"); await ocrWorker.setParameters({tessedit_char_whitelist:"0123456789IN", tessedit_pageseg_mode:"7", classify_bln_numeric_mode:"1", load_system_dawg:"0", load_freq_dawg:"0"}); }
-  const { data } = await ocrWorker.recognize(preprocessDotMatrix(captureCrop(video))); const digits = normalizeCode(data.text); if (!digits) return null;
+  if (!ocrWorker) {
+    ocrWorker = await Tesseract.createWorker("eng");
+    await ocrWorker.setParameters({
+      tessedit_char_whitelist: "0123456789IN",
+      tessedit_pageseg_mode: "7",
+      classify_bln_numeric_mode: "1",
+      load_system_dawg: "0",
+      load_freq_dawg: "0",
+    });
+  }
+  const { data } = await ocrWorker.recognize(
+    preprocessDotMatrix(captureCrop(video)),
+  );
+  const digits = normalizeCode(data.text);
+  if (!digits) return null;
   if (PRODUCT_CATALOG[digits]) return digits;
-  const numeric = digits.replace(/I/g, "1").match(/\d{5,10}/g) || []; return numeric.find(code => PRODUCT_CATALOG[code]) || closestCatalogCode(numeric[0]);
+  const numeric = digits.replace(/I/g, "1").match(/\d{5,10}/g) || [];
+  return (
+    numeric.find((code) => PRODUCT_CATALOG[code]) ||
+    closestCatalogCode(numeric[0])
+  );
 }
-function closestCatalogCode(code) { if (!code) return null; const candidates = Object.keys(PRODUCT_CATALOG).filter(k => /^\d+$/.test(k) && Math.abs(k.length-code.length) <= 1); let best = null, score = 3; for (const key of candidates) { let changes = Math.abs(key.length-code.length); for (let i=0;i<Math.min(key.length,code.length);i++) if(key[i]!==code[i]) changes++; if(changes < score) {score=changes;best=key;} } return best; }
+function closestCatalogCode(code) {
+  if (!code) return null;
+  const candidates = Object.keys(PRODUCT_CATALOG).filter(
+    (k) => /^\d+$/.test(k) && Math.abs(k.length - code.length) <= 1,
+  );
+  let best = null,
+    score = 3;
+  for (const key of candidates) {
+    let changes = Math.abs(key.length - code.length);
+    for (let i = 0; i < Math.min(key.length, code.length); i++)
+      if (key[i] !== code[i]) changes++;
+    if (changes < score) {
+      score = changes;
+      best = key;
+    }
+  }
+  return best;
+}
 async function captureAndRead() {
-  const button = document.getElementById("scan-trigger-btn"), video = document.getElementById("camera-feed"), status = document.getElementById("camera-status");
-  if (!video.videoWidth) return App.openManual(); button.disabled = true; button.textContent = "Reading dotted code…"; status.textContent = "Trying enhanced paint-box reader…";
+  const button = document.getElementById("scan-trigger-btn"),
+    video = document.getElementById("camera-feed"),
+    status = document.getElementById("camera-status");
+  if (!video.videoWidth || !video.videoHeight) {
+    alert("Camera is not ready yet.");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "⏳ Reading...";
+  status.textContent = "Reading product code…";
   try {
     await initOCR();
     const scanCanvas = captureScanRegion(video);
+    console.log("OCR image:", scanCanvas.width, "x", scanCanvas.height);
     let matchedCode = null;
-    // Restore the former multi-pass reader: it tests both adaptive and Otsu
-    // thresholding, with different dot-fusion levels, before giving up.
+    let lastText = "";
+    let lastCandidates = [];
     for (const variant of OCR_VARIANTS) {
-      const result = await recognizeCanvas(preprocessDottedImage(scanCanvas, variant));
-      if (result.matched) { matchedCode = result.matched; break; }
+      console.log("Trying OCR variant:", variant.name);
+      const processed = preprocessDottedImage(scanCanvas, variant);
+      const result = await recognizeCanvas(processed);
+      const text = result.text || "";
+      if (text) {
+        lastText = text;
+        const candidates = text.match(/\d{4,10}/g) || [];
+        if (candidates.length) lastCandidates = candidates;
+        console.log(
+          variant.name,
+          "OCR:",
+          JSON.stringify(text),
+          "match:",
+          result.matched,
+        );
+      }
+      if (result.matched) {
+        matchedCode = result.matched;
+        console.log("MATCHED CATALOG CODE:", matchedCode);
+        break;
+      }
     }
-    if (matchedCode) { status.textContent = "Product recognised."; App.openProduct(matchedCode); }
-    else { App.feedback("error"); status.textContent = "Not recognised - move closer or add it manually."; App.openManual(); }
+    if (matchedCode) {
+      status.textContent = "Product recognised.";
+      App.openProduct(matchedCode);
+      return;
+    }
+    App.feedback("error");
+    console.warn(
+      "OCR failed.",
+      "Last text:",
+      lastText,
+      "Candidates:",
+      lastCandidates,
+    );
+    status.textContent = "Not recognised - move closer or add it manually.";
+    if (lastCandidates.length) App.openManual(lastCandidates[0]);
+    else
+      alert(
+        "Code not recognized.\n\nPlace the dotted code inside the dashed box, move slightly closer, and tap Scan again.",
+      );
+  } catch (error) {
+    console.error("OCR Failed:", error);
+    status.textContent =
+      "Could not read that image. Try again or add manually.";
+    App.feedback("error");
+    alert("OCR error. Please refresh the page and try again.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Scan product";
   }
-  catch { status.textContent = "Could not read that image. Try again or add manually."; App.feedback("error"); }
-  finally { button.disabled = false; button.textContent = "Scan product"; }
 }
 window.addEventListener("DOMContentLoaded", () => App.start());
