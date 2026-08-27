@@ -189,13 +189,44 @@ th { color: var(--text-dim); font-weight: 600; background: #fafafa; text-align: 
 .nav-tab.active .tab-icon { filter: grayscale(0); opacity: 1; }
 
 /* Paint Swipe */
-.swipe-effect { position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0; }
-.swipe-effect.active.swipe-in { background: linear-gradient(105deg, transparent 0%, rgba(83, 103, 245, 0.2) 45%, rgba(83, 103, 245, 0.4) 50%, transparent 75%); animation: paintBrush 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.swipe-effect.active.swipe-out { background: linear-gradient(105deg, transparent 0%, rgba(245, 158, 11, 0.2) 45%, rgba(245, 158, 11, 0.4) 50%, transparent 75%); animation: paintBrush 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.swipe-effect { 
+  position: fixed; 
+  inset: 0; 
+  pointer-events: none; 
+  z-index: 9999; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paint-stroke {
+  stroke-dasharray: 1000;
+  width: 120%;
+  height: 50%;
+  position: absolute;
+  top: 25%;
+  left: -10%;
+  transform: scaleX(0);
+  transform-origin: left;
+  opacity: 0;
+}
+.swipe-effect.active.swipe-in .paint-stroke { 
+  stroke: rgba(83, 103, 245, 0.85); 
+  animation: paintBrush 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+}
+.swipe-effect.active.swipe-out .paint-stroke { 
+  stroke: rgba(245, 158, 11, 0.85); 
+  animation: paintBrush 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+}
 .swipe-effect.active.swipe-error { background: rgba(239, 68, 68, 0.15); animation: flash 0.3s forwards; }
 
-@keyframes paintBrush { 0% { transform: scaleX(0) skewX(-20deg); transform-origin: left; opacity: 1; } 60% { transform: scaleX(1) skewX(-15deg); opacity: 0.9; } 100% { transform: scaleX(1) skewX(0deg); opacity: 0; } }
+@keyframes paintBrush { 
+  0% { transform: scaleX(0); opacity: 1; stroke-dasharray: 500; stroke-dashoffset: 500; } 
+  40% { transform: scaleX(1); opacity: 1; stroke-dashoffset: 0; } 
+  80% { transform: scaleX(1); opacity: 1; stroke-dashoffset: 0; } 
+  100% { transform: scaleX(1); opacity: 0; stroke-dashoffset: 0; } 
+}
 @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
 .view-panel { display: none; padding: 16px; }
 .view-panel.active { display: block; }
 

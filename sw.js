@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = "coatcount-v1";
+const CACHE_NAME = "coatcount-v2";
 const ASSETS = [
   "./",
   "./index.html",
