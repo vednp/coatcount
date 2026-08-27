@@ -137,49 +137,6 @@ const RAW_CATALOG = [
   { c: "6457575", n: 'Dulux Signature Epoxy Int. Roller 9"' },
   { c: "5953877", n: "DN WS Texture Rustic 90 25kg" },
   { c: "5993730", n: "DN WS Texture Dholpur 25kg" },
-  { c: "73519672", n: "DN VAF Metallic - Silver" },
-  { c: "73519772", n: "DN VAF Metallic - Gold" },
-  { c: "IN73519672", n: "DN VAF Metallic - Silver" },
-  { c: "IN73519772", n: "DN VAF Metallic - Gold" },
-  { c: "58517 66-70", n: "VT Eterna Matt White/90 Base" },
-  { c: "58517 71-74", n: "VT Eterna Matt 92 Base" },
-  { c: "58517 76-79", n: "VT Eterna Matt 93 Base" },
-  { c: "58517 80-81", n: "VT Eterna Matt 94 Base" },
-  { c: "58524 37-40", n: "VT Eterna Basecoat" },
-  { c: "58564 14-18", n: "DN VT Diamond 93 Base" },
-  { c: "58564 19-23", n: "DN VT Pearl Glo New Accent 93 Base" },
-  { c: "58564 09-13", n: "DN VT Platinum Glo New Accent 93 Base" },
-  { c: "5832299/306/313/320 &", n: "5910851 Dulux SuperClean 3in1 MR White 90 Base" },
-  { c: "5832327/34/41/48 &", n: "5910851 Dulux SuperClean 3in1 MR 92 Base" },
-  { c: "5832355/362/369/472 &", n: "5910852 Dulux SuperClean 3in1 MR 93 Base" },
-  { c: "5832479/486/493/500 &", n: "5910853 Dulux SuperClean 3in1 MR 94 Base" },
-  { c: "5906464/65/66/67 &", n: "5906736 Dulux SuperClean New Brilliant White" },
-  { c: "5906708/09/10/11 &", n: "5906739 Dulux SuperClean New White 90 Base" },
-  { c: "5906712/13/14/15 &", n: "5906739 Dulux SuperClean New 92 Base" },
-  { c: "5906716/17/18/19 &", n: "5906739 Dulux SuperClean New 93 Base" },
-  { c: "5906720/21/22/23 &", n: "5906740 Dulux SuperClean New 94 Base" },
-  { c: "5906724/25 &", n: "5906741 Dulux SuperClean New 95 Base" },
-  { c: "5906728/29 &", n: "5906742 Dulux SuperClean New 96 Base" },
-  { c: "5906732/33", n: "&5906743 Dulux SuperClean New 97 Base" },
-  { c: "5853009/10/11/12/31", n: "Dulux SuperCover Ultra Brilliant White" },
-  { c: "5853013/14/15/16/32", n: "Dulux SuperCover Ultra White 90 Base" },
-  { c: "5853017/18/19/20/33", n: "Dulux SuperCover Ultra Intermediate 92 Base" },
-  { c: "5853021/22/23/24/34", n: "Dulux SuperCover Ultra Accent 94 Base" },
-  { c: "5853027/28/36", n: "Dulux SuperCover Ultra Yellow 96 Base" },
-  { c: "5853029/30/37", n: "Dulux SuperCover Ultra Red 97 Base" },
-  { c: "5948200-03", n: "DN WS PF 15yr 98 Base" },
-  { c: "5948407", n: "DN WS PF 15yr 92 Base" },
-  { c: "5948409", n: "DN WS PF 15yr 93 Base" },
-  { c: "5948411", n: "DN WS PF 15yr 94 Base" },
-  { c: "5771981/82/83/84/013", n: "DN WS PF Brilliant White" },
-  { c: "5771985/86/87/88/014", n: "DN WS PF White 90 Base" },
-  { c: "5771989/90/91/92/015", n: "DN WS PF Intermediate 92 Base" },
-  { c: "5771993/94/95/96", n: "DN WS PF Accent 94 Base" },
-  { c: "5771997/98/99/000/017", n: "DN WS PF Deep 95 Base" },
-  { c: "5772018/02/03/04", n: "DN WS PF YOX Base" },
-  { c: "5772019/06/07/08", n: "DN WS PF ROX Base" },
-  { c: "5772020/10/11/12", n: "DN WS PF Vibrant Yellow Base" },
-  { c: "5769795/96/97/98", n: "DN WS Powerflexx 93 Base" },
 ];
 
 const PRODUCT_CATALOG = {};
@@ -1144,21 +1101,14 @@ function preprocessDottedImage(
 
 const OCR_VARIANTS = [
   {
-    name: "adaptive-strong",
-    dotRadius: 2,
-    blurRadius: 4,
-    offset: 12,
-    finalDilate: 2,
+    name: "adaptive-light",
+    dotRadius: 1,
+    blurRadius: 2,
+    offset: 8,
+    finalDilate: 1,
     adaptive: true,
   },
-  {
-    name: "otsu-strong",
-    dotRadius: 3,
-    blurRadius: 3,
-    offset: 0,
-    finalDilate: 2,
-    adaptive: false,
-  },
+
   {
     name: "adaptive-medium",
     dotRadius: 2,
@@ -1167,6 +1117,16 @@ const OCR_VARIANTS = [
     finalDilate: 1,
     adaptive: true,
   },
+
+  {
+    name: "adaptive-strong",
+    dotRadius: 2,
+    blurRadius: 4,
+    offset: 12,
+    finalDilate: 2,
+    adaptive: true,
+  },
+
   {
     name: "otsu-medium",
     dotRadius: 2,
@@ -1175,14 +1135,15 @@ const OCR_VARIANTS = [
     finalDilate: 2,
     adaptive: false,
   },
+
   {
-    name: "adaptive-light",
-    dotRadius: 1,
-    blurRadius: 2,
-    offset: 8,
-    finalDilate: 1,
-    adaptive: true,
-  }
+    name: "otsu-strong",
+    dotRadius: 3,
+    blurRadius: 3,
+    offset: 0,
+    finalDilate: 2,
+    adaptive: false,
+  },
 ];
 
 // ---------------------------------------------------------------
@@ -1339,14 +1300,11 @@ function matchCatalogCode(rawText) {
 // ---------------------------------------------------------------
 
 async function recognizeCanvas(canvas) {
-  // Ordered 13, 8, 7. PSM 13 (raw line) and 8 (single word) are generally much better for dotted numeric matrices than 7.
-  const psmModes = ["13", "8", "7"];
+  const psmModes = ["7", "8", "13"];
 
   let bestText = "";
 
   for (const psm of psmModes) {
-    // Only set page seg mode inside the loop to avoid heavy reset overhead if possible,
-    // but Tesseract.js setParameters is usually fine as long as it doesn't trigger language reload.
     await ocrWorker.setParameters({
       tessedit_pageseg_mode: psm,
       tessedit_char_whitelist: "0123456789",
