@@ -1105,13 +1105,45 @@ function preprocessDottedImage(sourceCanvas, options) {
 
 const OCR_VARIANTS = [
   {
-    name: "dotted-optimized",
+    name: "adaptive-strong",
     dotRadius: 2,
-    blurRadius: 2,
-    offset: 15,
+    blurRadius: 4,
+    offset: 12,
+    finalDilate: 2,
+    adaptive: true,
+  },
+  {
+    name: "otsu-strong",
+    dotRadius: 3,
+    blurRadius: 3,
+    offset: 0,
+    finalDilate: 2,
+    adaptive: false,
+  },
+  {
+    name: "adaptive-medium",
+    dotRadius: 2,
+    blurRadius: 3,
+    offset: 10,
     finalDilate: 1,
     adaptive: true,
   },
+  {
+    name: "otsu-medium",
+    dotRadius: 2,
+    blurRadius: 2,
+    offset: 0,
+    finalDilate: 2,
+    adaptive: false,
+  },
+  {
+    name: "adaptive-light",
+    dotRadius: 1,
+    blurRadius: 2,
+    offset: 8,
+    finalDilate: 1,
+    adaptive: true,
+  }
 ];
 
 // ---------------------------------------------------------------
@@ -1266,11 +1298,14 @@ function matchCatalogCode(rawText) {
 // ---------------------------------------------------------------
 
 async function recognizeCanvas(canvas) {
-  const psmModes = ["7"];
+  // Ordered 13, 8, 7. PSM 13 (raw line) and 8 (single word) are generally much better for dotted numeric matrices than 7.
+  const psmModes = ["13", "8", "7"];
 
   let bestText = "";
 
   for (const psm of psmModes) {
+    // Only set page seg mode inside the loop to avoid heavy reset overhead if possible,
+    // but Tesseract.js setParameters is usually fine as long as it doesn't trigger language reload.
     await ocrWorker.setParameters({
       tessedit_pageseg_mode: psm,
       tessedit_char_whitelist: "0123456789",
