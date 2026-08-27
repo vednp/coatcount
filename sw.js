@@ -1,13 +1,11 @@
 // sw.js
-const CACHE_NAME = "coatcount-v5";
+const CACHE_NAME = "coatcount-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
-  "./icons/coatcount-192.png",
-  "./icons/coatcount-512.png",
 ];
 
 self.addEventListener("install", (e) => {
@@ -29,21 +27,7 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then(
-      (cached) =>
-        cached ||
-        fetch(e.request).then((response) => {
-          const copy = response.clone();
-          if (
-            response.ok &&
-            new URL(e.request.url).origin === self.location.origin
-          ) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy));
-          }
-          return response;
-        }),
-    ),
+    caches.match(e.request).then((cached) => cached || fetch(e.request)),
   );
 });

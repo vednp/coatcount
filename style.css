@@ -96,18 +96,35 @@ body.mode-out { --active-theme: var(--theme-out); --active-glow: var(--theme-out
 /* Rounded Camera Card */
 .camera-card {
   position: relative;
-  background: #000;
+  background: var(--surface-1);
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--surface-border);
 }
-#reader-container { position: relative; width: 100%; min-height: 240px; }
-#interactive-reader { width: 100%; border: none !important; }
-#interactive-reader video { border-radius: 16px; object-fit: cover; }
+.camera-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(180px, 31vh, 230px);
+  background: #101114;
+  overflow: hidden;
+}
+#camera-feed { display: block; width: 100%; height: 100%; object-fit: cover; }
+.scan-target {
+  position: absolute;
+  top: 34%;
+  left: 9%;
+  right: 9%;
+  height: 54px;
+  border: 2px dashed var(--active-theme);
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
 .scan-laser {
   position: absolute;
-  top: 15%; left: 5%; right: 5%; height: 2px;
+  top: 35%; left: 10%; right: 10%; height: 2px;
   background: var(--active-theme);
   box-shadow: 0 0 12px var(--active-theme);
   animation: scanning 2s infinite ease-in-out;
@@ -115,10 +132,14 @@ body.mode-out { --active-theme: var(--theme-out); --active-glow: var(--theme-out
   z-index: 10;
 }
 @keyframes scanning {
-  0% { top: 15%; opacity: 0; }
-  50% { top: 85%; opacity: 1; }
-  100% { top: 15%; opacity: 0; }
+  0% { top: 35%; opacity: 0; }
+  50% { top: 56%; opacity: 1; }
+  100% { top: 35%; opacity: 0; }
 }
+.scan-controls { padding: 10px 12px 12px; }
+.scan-status { min-height: 18px; margin: 0 0 8px; color: var(--text-dim); font-size: 0.78rem; font-weight: 600; text-align: center; }
+.scan-status.error { color: var(--theme-error); }
+.scan-controls .btn-save { width: 100%; min-height: 46px; background: var(--active-theme); }
 
 /* White Product Cards */
 .dense-card {
@@ -356,28 +377,3 @@ th { color: var(--text-dim); font-weight: 600; background: #fafafa; text-align: 
 }
 .mode-out .swipe-btn-thumb { background: var(--theme-out); }
 .btn-cancel-sheet { width: 100%; background: transparent; border: none; padding: 16px; margin-top: 10px; font-weight: 700; color: var(--text-dim); }
-
-/* Business dashboard and camera scanning refinements */
-.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 16px; }
-.install-app-btn { width: 100%; margin: 0 0 16px; padding: 11px 14px; border: 1px solid var(--active-theme); border-radius: 12px; background: var(--active-glow); color: var(--active-theme); font-weight: 800; font-size: .85rem; }
-.install-content p { margin: 0 0 18px; color: var(--text-dim); line-height: 1.5; }
-.install-content .btn-save { width: 100%; }
-.metric-card { min-width: 0; padding: 12px 10px; border: 1px solid var(--surface-border); border-radius: 14px; background: var(--surface-1); }
-.metric-card span, .metric-card small { display: block; color: var(--text-dim); font-size: .67rem; font-weight: 700; line-height: 1.25; }
-.metric-card strong { display: block; margin: 3px 0; overflow: hidden; text-overflow: ellipsis; color: var(--active-theme); font-size: 1.25rem; letter-spacing: -.03em; }
-#camera-feed { display: block; width: 100%; min-height: 250px; max-height: 48vh; object-fit: cover; background: #111827; }
-.scan-target { position: absolute; top: 42%; left: 8%; right: 8%; height: 52px; display: grid; place-items: end center; padding-bottom: 5px; border: 2px dashed var(--active-theme); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.14); pointer-events: none; }
-.scan-target span { padding: 4px 8px; border-radius: 8px; background: rgba(17,24,39,.76); color: white; font-size: .7rem; font-weight: 700; }
-.scan-button { display: block; width: calc(100% - 20px); margin: 10px; padding: 14px; font-size: .95rem; cursor: pointer; }
-.scan-button:disabled { cursor: wait; opacity: .68; }
-.camera-status { min-height: 20px; margin: 0 12px 12px; color: #d1d5db; font-size: .77rem; text-align: center; }
-.scan-laser { top: 31%; left: 8%; right: 8%; }
-.inventory-actions { display: flex; align-items: center; gap: 10px; }
-.inventory-actions button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--text-main); font-size: 1.25rem; line-height: 1; font-weight: 700; cursor: pointer; }
-.inventory-actions button:first-child { color: var(--theme-error); }
-.inventory-actions button:last-child { color: var(--theme-in); }
-.inventory-actions strong { min-width: 24px; text-align: center; color: var(--active-theme); }
-.inv-name em { font-style: normal; color: var(--active-theme); font-size: .76rem; white-space: nowrap; }
-.empty-list { padding: 28px 0; color: var(--text-dim); text-align: center; }
-@media (min-width: 680px) { body { max-width: 680px; margin: 0 auto; box-shadow: 0 0 60px rgba(17,24,39,.08); } .bottom-nav { left: 50%; width: min(100%, 680px); transform: translateX(-50%); } .fab-btn { right: max(20px, calc((100vw - 680px) / 2 + 20px)); } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

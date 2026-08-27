@@ -6,15 +6,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#5367f5" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="CoatCount" />
+    <meta name="theme-color" content="#ffffff" />
     <title>CoatCount</title>
     <link rel="manifest" href="manifest.json" />
-    <link rel="apple-touch-icon" href="icons/coatcount-180.png" />
     <link rel="stylesheet" href="style.css" />
-    <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   </head>
   <body class="mode-in">
     
@@ -30,7 +26,7 @@
         <div class="brand-logo"></div>
         <div>
           <h1 class="brand-title">CoatCount</h1>
-        <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
+          <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
         </div>
       </div>
       <div id="mode-indicator" class="mode-pill">STOCK IN</div>
@@ -39,12 +35,6 @@
     <main id="app-content">
       <!-- Scanner View -->
       <section id="scanner-view" class="view-panel active">
-        <div class="dashboard-grid" aria-label="Inventory summary">
-          <div class="metric-card"><span>In stock</span><strong id="metric-units">0</strong><small>total units</small></div>
-          <div class="metric-card"><span>Products</span><strong id="metric-skus">0</strong><small>active SKUs</small></div>
-          <div class="metric-card"><span>Today</span><strong id="metric-today">0</strong><small>scans processed</small></div>
-        </div>
-        <button id="install-app-btn" class="install-app-btn" hidden>Install CoatCount on this iPhone</button>
         <div class="qty-selector-container">
           <span class="qty-label">Batch:</span>
           <div class="qty-pills" id="qty-pill-group">
@@ -57,20 +47,24 @@
         </div>
 
         <div class="camera-card">
-          <div id="reader-container">
-            <video id="camera-feed" autoplay playsinline muted></video>
-            <canvas id="capture-canvas" hidden></canvas>
-            <div class="scan-target" aria-hidden="true"><span>Align barcode or dotted product code</span></div>
+          <div id="reader-container" class="camera-stage">
+            <video id="camera-feed" autoplay playsinline></video>
+            <canvas id="capture-canvas" style="display: none"></canvas>
+            <div class="scan-target" aria-hidden="true"></div>
             <div class="scan-laser" aria-hidden="true"></div>
           </div>
-          <button id="scan-trigger-btn" class="btn-save scan-button">Scan product</button>
-          <p id="camera-status" class="camera-status" aria-live="polite">Starting camera…</p>
+          <div class="scan-controls">
+            <p id="scan-status" class="scan-status" role="status" aria-live="polite">
+              Align the product code inside the guide.
+            </p>
+            <button id="scan-trigger-btn" class="btn-save">📸 Scan Code</button>
+          </div>
         </div>
 
         <div id="last-scanned-card" class="dense-card empty">
           <div class="empty-placeholder">
             <div class="pulse-icon">📷</div>
-            <p>Scan a product to add or sell stock.</p>
+            <p>Scan a Dulux barcode...</p>
           </div>
         </div>
       </section>
@@ -123,10 +117,10 @@
           min="1"
         />
         <div class="modal-actions">
-          <button class="btn-cancel" id="manual-cancel-btn">
+          <button class="btn-cancel" onclick="App.closeManualModal()">
             Cancel
           </button>
-          <button class="btn-save" id="manual-save-btn">
+          <button class="btn-save" onclick="App.saveManualItem()">
             Save Stock
           </button>
         </div>
@@ -173,16 +167,7 @@
         </div>
       </div>
       
-      <button class="btn-cancel-sheet" id="confirm-cancel-btn">Cancel</button>
-    </div>
-  </div>
-
-  <div id="install-sheet" class="bottom-sheet" aria-hidden="true">
-    <div class="sheet-content install-content">
-      <div class="sheet-drag-handle"></div>
-      <h2 class="sheet-title">Install CoatCount</h2>
-      <p>In Safari, tap <strong>Share</strong> and choose <strong>Add to Home Screen</strong>. It will then open like a regular app.</p>
-      <button class="btn-save" id="install-sheet-close">Got it</button>
+      <button class="btn-cancel-sheet" onclick="App.closeConfirmSheet()">Cancel</button>
     </div>
   </div>
 
