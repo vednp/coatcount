@@ -721,7 +721,7 @@ async function initOCR() {
 // Camera
 // ---------------------------------------------------------------
 
-async function legacyInitCamera() {
+async function initCamera() {
   const video = document.getElementById("camera-feed");
 
   try {
@@ -1345,7 +1345,7 @@ async function recognizeCanvas(canvas) {
 // Capture + OCR
 // ---------------------------------------------------------------
 
-async function legacyCaptureAndRead() {
+async function captureAndRead() {
   const video = document.getElementById("camera-feed");
   const btn = document.getElementById("scan-trigger-btn");
 
@@ -1547,7 +1547,6 @@ const App = {
     await this.store.init();
     this.bindEvents();
     await this.refresh();
-    initCamera();
   },
   bindEvents() {
     document
@@ -1595,9 +1594,6 @@ const App = {
     document
       .getElementById("confirm-cancel-btn")
       .addEventListener("click", () => this.closeConfirm());
-    document
-      .getElementById("scan-trigger-btn")
-      .addEventListener("click", captureAndRead);
     const installButton = document.getElementById("install-app-btn"),
       installSheet = document.getElementById("install-sheet");
     const isIOS =
@@ -1715,6 +1711,10 @@ const App = {
     document.getElementById("swipe-thumb").style.transform = "translateX(0)";
     document.getElementById("confirm-sheet").classList.add("active");
   },
+  // Compatibility bridge for the supplied scanner, which opens this handler.
+  openConfirmSheet(code) {
+    this.openProduct(code);
+  },
   closeConfirm() {
     document.getElementById("confirm-sheet").classList.remove("active");
     this.pending = null;
@@ -1788,6 +1788,10 @@ const App = {
     overlay.className = `swipe-effect active swipe-${mode}`;
     setTimeout(() => (overlay.className = "swipe-effect"), 700);
   },
+  // Compatibility bridge for the supplied scanner's failure feedback.
+  triggerFeedback(mode) {
+    this.feedback(mode);
+  },
   lastScan(product, mode, stock) {
     const card = document.getElementById("last-scanned-card");
     card.className = "dense-card";
@@ -1855,6 +1859,9 @@ function escapeHtml(value) {
   return span.innerHTML;
 }
 
+/* Replaced scanner implementation. The authoritative pipeline above is the
+   sole active camera/OCR code. Kept disabled only to avoid an unsafe bulk deletion. */
+/*
 let cameraStream;
 async function initCamera() {
   const video = document.getElementById("camera-feed");
@@ -2063,4 +2070,16 @@ async function captureAndRead() {
     button.textContent = "Scan product";
   }
 }
-window.addEventListener("DOMContentLoaded", () => App.start());
+*/
+window.addEventListener("DOMContentLoaded", async () => {
+  await App.start();
+
+  // Authoritative scanner boot sequence from the supplied working project.
+  await Promise.allSettled([
+    initCamera(),
+    initOCR(),
+  ]);
+
+  const button = document.getElementById("scan-trigger-btn");
+  button.addEventListener("click", captureAndRead);
+});
