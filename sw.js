@@ -1,11 +1,13 @@
 // sw.js
-const CACHE_NAME = "coatcount-v4";
+const CACHE_NAME = "coatcount-v5";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
+  "./icons/coatcount-192.png",
+  "./icons/coatcount-512.png",
 ];
 
 self.addEventListener("install", (e) => {

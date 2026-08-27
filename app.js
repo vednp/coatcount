@@ -653,7 +653,8 @@ const App = {
   },
 };
 
-// --- 4. OCR & BOOT LOGIC ---
+*/
+// --- Legacy OCR pipeline (reactivated for dotted paint-box codes) ---
 // ================================================================
 // 4. ROBUST OCR FOR DOTTED / DOT-MATRIX PRODUCT CODES
 // ================================================================
@@ -711,7 +712,7 @@ async function initOCR() {
 // Camera
 // ---------------------------------------------------------------
 
-async function initCamera() {
+async function legacyInitCamera() {
   const video = document.getElementById("camera-feed");
 
   try {
@@ -1388,7 +1389,7 @@ async function recognizeCanvas(canvas) {
 // Capture + OCR
 // ---------------------------------------------------------------
 
-async function captureAndRead() {
+async function legacyCaptureAndRead() {
   const video = document.getElementById("camera-feed");
   const btn = document.getElementById("scan-trigger-btn");
 
@@ -1517,6 +1518,7 @@ async function captureAndRead() {
 // Boot
 // ---------------------------------------------------------------
 
+/* Legacy boot disabled: the current UI owns camera and event startup.
 window.addEventListener("DOMContentLoaded", async () => {
   await App.start();
 
@@ -1599,6 +1601,11 @@ const App = {
     document.getElementById("manual-save-btn").addEventListener("click", () => this.saveManual());
     document.getElementById("confirm-cancel-btn").addEventListener("click", () => this.closeConfirm());
     document.getElementById("scan-trigger-btn").addEventListener("click", captureAndRead);
+    const installButton = document.getElementById("install-app-btn"), installSheet = document.getElementById("install-sheet");
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    if (isIOS && !isStandalone) { installButton.hidden = false; installButton.addEventListener("click", () => installSheet.classList.add("active")); }
+    document.getElementById("install-sheet-close").addEventListener("click", () => installSheet.classList.remove("active"));
     this.bindConfirmSlider();
   },
   bindConfirmSlider() {
@@ -1671,7 +1678,7 @@ const App = {
 function normalizeCode(value) { return String(value || "").toUpperCase().replace(/O/g, "0").replace(/L/g, "1").replace(/[^A-Z0-9]/g, ""); }
 function escapeHtml(value) { const span = document.createElement("span"); span.textContent = String(value); return span.innerHTML; }
 
-let cameraStream, ocrWorker;
+let cameraStream;
 async function initCamera() {
   const video = document.getElementById("camera-feed"), status = document.getElementById("camera-status");
   try { cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); video.srcObject = cameraStream; await video.play(); status.textContent = "Ready - keep the code inside the guide."; }
@@ -1706,8 +1713,20 @@ async function dottedCodeFromVideo(video) {
 function closestCatalogCode(code) { if (!code) return null; const candidates = Object.keys(PRODUCT_CATALOG).filter(k => /^\d+$/.test(k) && Math.abs(k.length-code.length) <= 1); let best = null, score = 3; for (const key of candidates) { let changes = Math.abs(key.length-code.length); for (let i=0;i<Math.min(key.length,code.length);i++) if(key[i]!==code[i]) changes++; if(changes < score) {score=changes;best=key;} } return best; }
 async function captureAndRead() {
   const button = document.getElementById("scan-trigger-btn"), video = document.getElementById("camera-feed"), status = document.getElementById("camera-status");
-  if (!video.videoWidth) return App.openManual(); button.disabled = true; button.textContent = "Reading…"; status.textContent = "Checking barcode…";
-  try { let code = await barcodeFromVideo(video); if (!code) { status.textContent = "Checking dotted product code…"; code = await dottedCodeFromVideo(video); } if (code) App.openProduct(code); else { App.feedback("error"); status.textContent = "Not recognised - try closer, or add it manually."; App.openManual(); } }
+  if (!video.videoWidth) return App.openManual(); button.disabled = true; button.textContent = "Reading dotted code…"; status.textContent = "Trying enhanced paint-box reader…";
+  try {
+    await initOCR();
+    const scanCanvas = captureScanRegion(video);
+    let matchedCode = null;
+    // Restore the former multi-pass reader: it tests both adaptive and Otsu
+    // thresholding, with different dot-fusion levels, before giving up.
+    for (const variant of OCR_VARIANTS) {
+      const result = await recognizeCanvas(preprocessDottedImage(scanCanvas, variant));
+      if (result.matched) { matchedCode = result.matched; break; }
+    }
+    if (matchedCode) { status.textContent = "Product recognised."; App.openProduct(matchedCode); }
+    else { App.feedback("error"); status.textContent = "Not recognised - move closer or add it manually."; App.openManual(); }
+  }
   catch { status.textContent = "Could not read that image. Try again or add manually."; App.feedback("error"); }
   finally { button.disabled = false; button.textContent = "Scan product"; }
 }

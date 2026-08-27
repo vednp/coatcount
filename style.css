@@ -359,6 +359,9 @@ th { color: var(--text-dim); font-weight: 600; background: #fafafa; text-align: 
 
 /* Business dashboard and camera scanning refinements */
 .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 16px; }
+.install-app-btn { width: 100%; margin: 0 0 16px; padding: 11px 14px; border: 1px solid var(--active-theme); border-radius: 12px; background: var(--active-glow); color: var(--active-theme); font-weight: 800; font-size: .85rem; }
+.install-content p { margin: 0 0 18px; color: var(--text-dim); line-height: 1.5; }
+.install-content .btn-save { width: 100%; }
 .metric-card { min-width: 0; padding: 12px 10px; border: 1px solid var(--surface-border); border-radius: 14px; background: var(--surface-1); }
 .metric-card span, .metric-card small { display: block; color: var(--text-dim); font-size: .67rem; font-weight: 700; line-height: 1.25; }
 .metric-card strong { display: block; margin: 3px 0; overflow: hidden; text-overflow: ellipsis; color: var(--active-theme); font-size: 1.25rem; letter-spacing: -.03em; }

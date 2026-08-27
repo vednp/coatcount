@@ -7,8 +7,12 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#5367f5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CoatCount" />
     <title>CoatCount</title>
     <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/coatcount-180.png" />
     <link rel="stylesheet" href="style.css" />
     <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   </head>
@@ -40,6 +44,7 @@
           <div class="metric-card"><span>Products</span><strong id="metric-skus">0</strong><small>active SKUs</small></div>
           <div class="metric-card"><span>Today</span><strong id="metric-today">0</strong><small>scans processed</small></div>
         </div>
+        <button id="install-app-btn" class="install-app-btn" hidden>Install CoatCount on this iPhone</button>
         <div class="qty-selector-container">
           <span class="qty-label">Batch:</span>
           <div class="qty-pills" id="qty-pill-group">
@@ -169,6 +174,15 @@
       </div>
       
       <button class="btn-cancel-sheet" id="confirm-cancel-btn">Cancel</button>
+    </div>
+  </div>
+
+  <div id="install-sheet" class="bottom-sheet" aria-hidden="true">
+    <div class="sheet-content install-content">
+      <div class="sheet-drag-handle"></div>
+      <h2 class="sheet-title">Install CoatCount</h2>
+      <p>In Safari, tap <strong>Share</strong> and choose <strong>Add to Home Screen</strong>. It will then open like a regular app.</p>
+      <button class="btn-save" id="install-sheet-close">Got it</button>
     </div>
   </div>
 
