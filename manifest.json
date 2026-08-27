@@ -3,8 +3,8 @@
   "short_name": "CoatCount",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#1e293b",
+  "background_color": "#f8f9fa",
+  "theme_color": "#5367f5",
   "orientation": "portrait",
   "icons": [
     {

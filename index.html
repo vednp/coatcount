@@ -6,11 +6,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#5367f5" />
     <title>CoatCount</title>
     <link rel="manifest" href="manifest.json" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   </head>
   <body class="mode-in">
     
@@ -26,7 +26,7 @@
         <div class="brand-logo"></div>
         <div>
           <h1 class="brand-title">CoatCount</h1>
-          <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
+        <div class="brand-subtitle" id="stat-summary">0 SKUs • 0 Units</div>
         </div>
       </div>
       <div id="mode-indicator" class="mode-pill">STOCK IN</div>
@@ -35,6 +35,11 @@
     <main id="app-content">
       <!-- Scanner View -->
       <section id="scanner-view" class="view-panel active">
+        <div class="dashboard-grid" aria-label="Inventory summary">
+          <div class="metric-card"><span>In stock</span><strong id="metric-units">0</strong><small>total units</small></div>
+          <div class="metric-card"><span>Products</span><strong id="metric-skus">0</strong><small>active SKUs</small></div>
+          <div class="metric-card"><span>Today</span><strong id="metric-today">0</strong><small>scans processed</small></div>
+        </div>
         <div class="qty-selector-container">
           <span class="qty-label">Batch:</span>
           <div class="qty-pills" id="qty-pill-group">
@@ -48,45 +53,19 @@
 
         <div class="camera-card">
           <div id="reader-container">
-            <div class="camera-card">
-              <div id="reader-container">
-                <video
-                  id="camera-feed"
-                  autoplay
-                  playsinline
-                  style="width: 100%; border-radius: 16px; object-fit: cover"
-                ></video>
-                <canvas id="capture-canvas" style="display: none"></canvas>
-                <!-- Add a target overlay to guide the user -->
-                <div
-                  class="scan-target"
-                  style="
-                    position: absolute;
-                    top: 30%;
-                    left: 10%;
-                    right: 10%;
-                    height: 60px;
-                    border: 2px dashed var(--theme-in);
-                    border-radius: 8px;
-                  "
-                ></div>
-              </div>
-              <button
-                id="scan-trigger-btn"
-                class="btn-save"
-                style="width: 100%; margin-top: 10px; padding: 16px"
-              >
-                📸 Tap to Scan Code
-              </button>
-            </div>
-            <div class="scan-laser"></div>
+            <video id="camera-feed" autoplay playsinline muted></video>
+            <canvas id="capture-canvas" hidden></canvas>
+            <div class="scan-target" aria-hidden="true"><span>Align barcode or dotted product code</span></div>
+            <div class="scan-laser" aria-hidden="true"></div>
           </div>
+          <button id="scan-trigger-btn" class="btn-save scan-button">Scan product</button>
+          <p id="camera-status" class="camera-status" aria-live="polite">Starting camera…</p>
         </div>
 
         <div id="last-scanned-card" class="dense-card empty">
           <div class="empty-placeholder">
             <div class="pulse-icon">📷</div>
-            <p>Scan a Dulux barcode...</p>
+            <p>Scan a product to add or sell stock.</p>
           </div>
         </div>
       </section>
@@ -139,10 +118,10 @@
           min="1"
         />
         <div class="modal-actions">
-          <button class="btn-cancel" onclick="App.closeManualModal()">
+          <button class="btn-cancel" id="manual-cancel-btn">
             Cancel
           </button>
-          <button class="btn-save" onclick="App.saveManualItem()">
+          <button class="btn-save" id="manual-save-btn">
             Save Stock
           </button>
         </div>
@@ -189,7 +168,7 @@
         </div>
       </div>
       
-      <button class="btn-cancel-sheet" onclick="App.closeConfirmSheet()">Cancel</button>
+      <button class="btn-cancel-sheet" id="confirm-cancel-btn">Cancel</button>
     </div>
   </div>
 
